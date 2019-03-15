@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-params.metadata = "datalist.txt"
+params.metadata = "$baseDir/datalist.txt"
 params.datadir  = "/lustre/scratch117/cellgen/cellgeni/ruben/batchbench/data"
 params.outdir   = "bc-results"
 
@@ -56,7 +56,7 @@ process py_scanorama{
 	tag "scanorama (py) $datasetname"
 
 	input:
-	set val(datasetname), file(datain), from ch_scanorama
+	set val(datasetname), file(datain) from ch_scanorama
 	
 	output:
 	set val(datasetname), val('scanorama'), file('scanorama.*.h5ad') into ch_scan_entropy
