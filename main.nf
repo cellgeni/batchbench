@@ -68,7 +68,7 @@ process py_scanorama{
 }
 
 
-ch_bbknn_entryopy.mix(ch_scan_entropy).set{ch_py_entropy}
+ch_bbknn_entropy.mix(ch_scan_entropy).set{ch_py_entropy}
 
 
 process R_limma{
