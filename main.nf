@@ -59,7 +59,7 @@ process py_scanorama{
 	set val(datasetname), file(datain), from ch_scanorama
 	
 	output:
-	set val(datasetname), val('scanorama'), file('scanorama.*.h5ad) into ch_scan_entropy
+	set val(datasetname), val('scanorama'), file('scanorama.*.h5ad') into ch_scan_entropy
 	
 	shell:
 	'''
