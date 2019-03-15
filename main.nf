@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
 params.metadata = "$baseDir/datalist.txt"
-params.datadir  = "/lustre/scratch117/cellgen/cellgeni/ruben/batchbench/data"
+params.datadir  = "none"
 params.outdir   = "bc-results"
 
 
