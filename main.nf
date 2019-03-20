@@ -4,6 +4,8 @@ params.metadata = "$baseDir/datalist.txt"
 params.datadir  = "none"
 params.outdir   = "bc-results"
 
+// awesome comment
+
 
 Channel.fromPath(params.metadata)
   .flatMap{ it.readLines() }
