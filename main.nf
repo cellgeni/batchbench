@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
-params.metadata = "$baseDir/datalist.txt"
-params.datadir  = "none"
+params.metadata = "datalist.txt"
+params.datadir  = null
 params.outdir   = "bc-results"
 
 // awesome comment
@@ -22,7 +22,7 @@ process get_datasets {
 
     output:
     set val(datasetname), file('*.h5ad') into ch_bbknn, ch_scanorama
-    set val(datasetname), file('*.rds') into  ch_R_limma, ch_R_ComBat
+    set val(datasetname), file('*.rds') into  ch_R_limma, ch_R_combat
 
     shell:
     '''
@@ -65,7 +65,7 @@ process py_scanorama{
 	
 	shell:
 	'''
-	Scanorama_script.py !{datain} scanorama.!{datasetname}.h5ad
+	scanorama_script.py !{datain} scanorama.!{datasetname}.h5ad
 	'''
 }
 
@@ -89,19 +89,19 @@ process R_limma{
 	'''
 }
 
-process R_ComBat{
+process R_combat{
 	
-	tag "ComBat (R) $datasetname"
+	tag "combat (R) $datasetname"
 
 	input:
-	set val(datasetname), file(datain) from ch_R_ComBat
+	set val(datasetname), file(datain) from ch_R_combat
 
 	output:
 	set val(datasetname), val('ComBat'), file('ComBat.*.rds') into ch_R_ComBat_entropy
 	
 	shell:
 	'''
-	ComBat_script.R !{datain} ComBat.!{datasetname}.rds
+	combat_script.R !{datain} ComBat.!{datasetname}.rds
 	'''
 }
 
@@ -121,7 +121,7 @@ process R_entropy {
 
     shell:
     '''
-    entropy_script_R.R !{datain} exp_mat !{method}.!{datasetname}.epy
+    entropy_scripts/entropy_script_R.R !{datain} exp_mat !{method}.!{datasetname}.epy
     '''
 }
 
@@ -139,7 +139,7 @@ process py_entropy {
 
     shell:
     '''
-    entropy_script.py !{datain}  !{method}.!{datasetname}.epy
+    entropy_scripts/entropy_script.py !{datain}  !{method}.!{datasetname}.epy
     '''
 }
 

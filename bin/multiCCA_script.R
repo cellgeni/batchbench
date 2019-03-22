@@ -2,7 +2,7 @@
 
 #libraries
 library(SingleCellExperiment) #object processing
-library(scater)
+#library(scater)
 library(Seurat)
 
 
@@ -34,7 +34,7 @@ for (i in 1:len) {
                  )
 }
 #select those HVG present in more than X subsets
-genes.use <- names(which(table(genes.use) > 2))
+#genes.use <- names(which(table(genes.use) > 2))
 for (i in 1:len) {
   genes.use <- genes.use[genes.use %in% rownames(batch_list[[i]]@scale.data)]
 }

@@ -1,10 +1,9 @@
-#!/usr/bin/env python3#
+#!/usr/bin/env python3
   
 #modules
-import bbknn
 import numpy as np
 import pandas as pd
-import scanpy.api as sc #should it be .API?
+import scanpy.api as sc
 import scanorama
 import anndata
 import os
@@ -56,4 +55,5 @@ if __name__== "__main__":
                             help='output file batch corrected')
 
     args = parser.parse_args()
-
+	
+    main(args)

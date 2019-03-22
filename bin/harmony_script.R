@@ -1,8 +1,7 @@
-
 #!/usr/bin/env Rscript
   
 #libraries
-library(SingleCellExperiment) #object processing
+#library(SingleCellExperiment) #object processing
 library(scater) #object processing
 library(harmony) #Harmony
 library(magrittr) #Harmony
