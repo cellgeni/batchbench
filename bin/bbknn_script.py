@@ -21,7 +21,7 @@ def main(args):
     #compute PCA
     sc.tl.pca(dataset, n_comps = 10)
     #run bbknn
-    dataset_bbknn = bbknn.bbknn(dataset, neighbors_within_batch= 10, n_pcs=10, save_knn=True, copy=True)
+    dataset_bbknn = bbknn.bbknn(dataset,batch_key='Batch', neighbors_within_batch= 10, n_pcs=10, save_knn=True, copy=True)
     print("BBKNN done!")
 
     #save corrected object to the specified path in the output

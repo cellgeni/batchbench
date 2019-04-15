@@ -16,7 +16,7 @@ if (length(args)==0) {
 dataset <- readRDS(args[1])
 
 #cell batch label vector
-batch_vector <- dataset$dataset
+batch_vector <- as.character(dataset$Batch)
 #run limma
 t1 = Sys.time()
 

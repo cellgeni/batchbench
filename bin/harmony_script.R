@@ -15,7 +15,7 @@ dataset <- readRDS(args[1])
 dataset <- runPCA(dataset, method = "prcomp", exprs_values = "logcounts", ncomponents = 10)
 pca <- dataset@reducedDims@listData[["PCA"]]
 #cell batch label vector
-batch_vector <-  dataset$dataset
+batch_vector <-  as.character(dataset$Batch)
 
 #run Harmony
 dataset@reducedDims@listData[['corrected_embedding']] <- HarmonyMatrix(pca, batch_vector, theta=4)

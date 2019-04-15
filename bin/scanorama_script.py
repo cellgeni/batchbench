@@ -18,7 +18,7 @@ def correct(datasets):
     corrected = scanorama.correct_scanpy(datasets)
 
     #merge Scanorama corrected object
-    corrected_dataset = corrected[0].concatenate(corrected[1:], join="inner", batch_key = 'batch')
+    corrected_dataset = corrected[0].concatenate(corrected[1:], join="inner", batch_key = 'Batch')
     print("Scanorama worked!")
 
     #save Scanorama corrected object
@@ -34,10 +34,10 @@ def main(args):
     print("File read!")
 
     #subset the dataset by batches
-    N_batches = len(dataset.obs['batch'].astype('category').cat.categories)
+    N_batches = len(dataset.obs['Batch'].astype('category').cat.categories)
     datasets = []
     for i in range(0, N_batches):
-        batch = dataset[dataset.obs['batch'] == dataset.obs['batch'].cat.categories[i]]
+        batch = dataset[dataset.obs['Batch'] == dataset.obs['Batch'].cat.categories[i]]
         datasets.append(batch)
 
     print(datasets)

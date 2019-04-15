@@ -14,6 +14,9 @@ if (length(args)==0) {
 #input file
 dataset <- readRDS(args[1])
 
+#remove those genes with 0 variance, if not ComBat throws error!
+dataset <- dataset[rowSums(logcounts(dataset)) > 0, ]
+
 #data
 mod_data <- as.data.frame(t(as.matrix(logcounts(dataset))))
 # Basic batch removal
@@ -23,7 +26,7 @@ t1 = Sys.time()
 
 assay(dataset, "corrected") <- ComBat(
   dat = t(mod_data),
-  batch = dataset$dataset,
+  batch = as.character(dataset$Batch),
   mod = mod0,
   par.prior = TRUE,
   prior.plots = FALSE

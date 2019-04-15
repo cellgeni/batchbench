@@ -17,9 +17,11 @@ dataset <- readRDS(args[1])
 
 
 #create a list of the batches in the dataset
-len <- length(names(table(dataset$dataset)))
+#len <- length(names(table(dataset$Batch)))
+batch_vector <- as.character(dataset$Batch)
+len <- length(table(as.character(batch_vector)))
 
-batch_list <- lapply(1:len, function(x) {logcounts(dataset[, dataset$dataset == names(table(dataset$dataset)[x])])})
+batch_list <- lapply(1:len, function(x) {logcounts(dataset[, batch_vector == names(table(batch_vector))[x]])})
 
 t1 = Sys.time()
 #run mnnCorrect
@@ -27,7 +29,7 @@ corrected <- do.call('mnnCorrect', c(batch_list, c(k=30, sigma=0.1, cos.norm.in=
   
   #fix the names of corrected matrices                                  
   for (i in 2:len) {
-    colnames(corrected$corrected[[i]]) <- colnames(dataset[ ,dataset$dataset == names(table(dataset$dataset)[i])])
+    colnames(corrected$corrected[[i]]) <- colnames(dataset[ ,batch_vector == names(table(batch_vector)[i])])
     rownames(corrected$corrected[[i]]) <- rownames(dataset)
 }
 #append the corrected expression matrix to object  
