@@ -48,12 +48,11 @@ if __name__== "__main__":
 
     parser = argparse.ArgumentParser(description='Input/Output files')
 
-    parser.add_argument('input',
-                        help='input file to be batch corrected')
+    parser.add_argument("--input", dest='input',
+                        help ='h5ad object over which Scanorama is going to be ran')
 
-    parser.add_argument('output',
-                            help='output file batch corrected')
+    parser.add_argument('--output', dest='output',
+                        help='Scanorama corrected object.Scanorama corrects the expression matrix')
 
-    args = parser.parse_args()
-	
+    args = parser.parse_args()	
     main(args)

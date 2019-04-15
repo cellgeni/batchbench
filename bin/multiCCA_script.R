@@ -3,9 +3,17 @@
 library(Seurat)
 library(SingleCellExperiment)
 
-#input
-args <- commandArgs(trailingOnly = TRUE)
-dataset <- readRDS(args[1])
+args <- R.utils::commandArgs(asValues=TRUE)
+
+if (is.null(args[["input"]])) {
+  print("Provide a valid input file name --> RDS file")
+}
+if (is.null(args[["output"]])) {
+  print("Provide a valid outpsut file name --> RDS file")
+}
+
+#INPUT!
+dataset <- readRDS(args[["input"]])
 
 #if more than one data slot available(get the normcounts)
 dataset <- Convert(dataset, to = "seurat", raw.data.slot = "logcounts", data.slot = "logcounts")
@@ -53,7 +61,7 @@ if (len < 3){
                           dims.align = 1:5)
   print("Congratulations, CCA worked!")
   
-  saveRDS(dataset, args[2])
+  saveRDS(dataset, args[["output"]])
 }
 
 #if more that 2 batches
@@ -74,5 +82,5 @@ if (len >= 3){
                           grouping.var = "Batch",
                           dims.align = 1:5)
   print("Congratulations, multiCCA worked!")
-  saveRDS(dataset, args[2])
+  saveRDS(dataset, args[["output"]])
 }

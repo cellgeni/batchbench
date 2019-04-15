@@ -1,15 +1,22 @@
 #!/usr/bin/env Rscript
   
 #libraries
-#library(SingleCellExperiment) #object processing
 library(scater) #object processing
 library(harmony) #Harmony
 library(magrittr) #Harmony
 
-args <- commandArgs(trailingOnly = TRUE)
+args <- R.utils::commandArgs(asValues=TRUE)
+
+if (is.null(args[["input"]])) {
+  print("Provide a valid input file name --> RDS file")
+  }
+if (is.null(args[["output"]])) {
+  print("Provide a valid outpsut file name --> RDS file")
+    }
+
 
 #INPUT!
-dataset <- readRDS(args[1])
+dataset <- readRDS(args[["input"]])
 
 #run PCA
 dataset <- runPCA(dataset, method = "prcomp", exprs_values = "logcounts", ncomponents = 10)
@@ -23,4 +30,4 @@ dataset@reducedDims@listData[['corrected_embedding']] <- HarmonyMatrix(pca, batc
 print("congratulations, HARMONY worked!!!")
 
 #OUTPUT!
-saveRDS(dataset, args[2])
+saveRDS(dataset, args[["output"]])

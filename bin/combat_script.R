@@ -4,15 +4,18 @@
 library(SingleCellExperiment) #object processing
 library(sva) #ComBat
 
-args <- commandArgs(trailingOnly = TRUE)
 
-# test if there is at least one argument: if not, return an error
-if (length(args)==0) {
-  stop("At least one argument must be supplied (input file).n", call.=FALSE)
+args <- R.utils::commandArgs(asValues=TRUE)
+
+if (is.null(args[["input"]])) {
+  print("Provide a valid input file name --> RDS file")
+}
+if (is.null(args[["output"]])) {
+  print("Provide a valid outpsut file name --> RDS file")
 }
 
 #input file
-dataset <- readRDS(args[1])
+dataset <- readRDS(args[["input"]])
 
 #remove those genes with 0 variance, if not ComBat throws error!
 dataset <- dataset[rowSums(logcounts(dataset)) > 0, ]
@@ -41,6 +44,6 @@ print(t2-t1)
 
 print("ComBat worked!")
 
-saveRDS(dataset, file = args[2])
+saveRDS(dataset, file = args[["output"]])
 
 print("congratulations, this worked!!!")
