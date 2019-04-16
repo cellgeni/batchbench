@@ -13,3 +13,6 @@ RUN Rscript -e 'withr::with_libpaths(new = "/usr/lib/R/site-library/", devtools:
 
 # Install Bioconductor packages
 RUN Rscript -e 'BiocManager::install(c("blah-blah-blah1", "blah-blah-blah2"), version = "3.8")'
+
+# Install python packages
+RUN pip install blah-blah-blah1 blah-blah-blah2
