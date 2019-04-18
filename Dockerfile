@@ -15,5 +15,5 @@ RUN Rscript -e 'install.packages("lsa")'
 #RUN Rscript -e 'BiocManager::install(c("bla-bla1", "bla-bla2"), version = "3.8")'
 
 # Install python packages
-#RUN
+RUN pip install umap-learn
 
