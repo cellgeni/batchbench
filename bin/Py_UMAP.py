@@ -43,7 +43,7 @@ def distribute_datasets(dataset):
     except KeyError:
         
         print('Scanorama corrected object!')
-        save_umap(umap_scanorama(dataset))
+        save_umap(umap_scanorama(dataset), out_name = args.output_2)
         
 #read file
 def read_h5ad(args):
