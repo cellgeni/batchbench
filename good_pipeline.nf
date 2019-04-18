@@ -6,7 +6,7 @@ vim: syntax=groovy
 
 params.metadata = null
 params.datadir  = null
-params.outdir   = "New_results_2"
+params.outdir   = "results_poster_MASAMB"
 
 // awesome comment
 
@@ -51,7 +51,7 @@ process QC_h5ad {
         set val(datasetname), file('QC.*.h5ad') into ch_bbknn, ch_scanorama 
         shell:
         '''
-        Py_QC_dataset_v2.py --input !{datain} --batch_threshold 10 --cell_type_threshold 1 --output QC.!{datasetname}.h5ad
+        Py_QC_dataset.py --input !{datain} --batch_threshold 10 --cell_type_threshold 1 --output QC.!{datasetname}.h5ad
         '''
 }
 
@@ -63,7 +63,7 @@ process QC_rds {
         set val(datasetname), file('QC.*.rds') into ch_entropy_before, ch_distance_before, ch_R_harmony, ch_R_limma, ch_R_combat, ch_R_multiCCA, ch_R_mnnCorrect
         shell:
         '''
-        R_QC_dataset_v2.R --input !{datain} --batch_threshold 10 --cell_type_threshold 1 --output QC.!{datasetname}.rds
+        R_QC_dataset.R --input !{datain} --batch_threshold 10 --cell_type_threshold 1 --output QC.!{datasetname}.rds
         '''
 }
 
@@ -199,7 +199,7 @@ process R_entropy {
 
     shell:
     '''
-    R_entropy_after_v2.R --input !{datain} --output entropy_!{method}.!{datasetname}.epy
+    R_entropy_after.R --input !{datain} --output entropy_!{method}.!{datasetname}.epy
     '''
 }
 
@@ -217,7 +217,7 @@ process py_entropy {
 
     shell:
     '''
-    entropy_py_v2.py --input !{datain} --output entropy_!{method}.!{datasetname}.epy
+    entropy_py.py --input !{datain} --output entropy_!{method}.!{datasetname}.epy
     '''
 }
 
@@ -235,7 +235,7 @@ process py_distances {
 
     shell:
     '''
-    Py_distance_after_v2.py --input !{datain} --output distances_!{method}.!{datasetname}.epy
+    Py_distance_after.py --input !{datain} --output distances_!{method}.!{datasetname}.epy
     '''
 }
 
@@ -253,7 +253,7 @@ process R_entropy_before {
 
     shell:
     '''
-    R_entropy_before_v2.R --input !{datain} --output entropy_before_.!{datasetname}.epy
+    R_entropy_before.R --input !{datain} --output entropy_before_.!{datasetname}.epy
     '''
 }
 
@@ -271,7 +271,7 @@ process R_distance_before {
 
     shell:
     '''
-    distances_before_v2.R --input !{datain} --output distances_before_.!{datasetname}.epy
+    distances_before.R --input !{datain} --output distances_before_.!{datasetname}.epy
     '''
 }
 
@@ -289,7 +289,7 @@ process R_distance_after {
 
     shell:
     '''
-    distances_after_v2.R --input !{datain} --output distances_!{method}.!{datasetname}.epy
+    distances_after.R --input !{datain} --output distances_!{method}.!{datasetname}.epy
     '''
 }
 

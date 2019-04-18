@@ -14,12 +14,11 @@ if (is.null(args[["output"]])) {
   print("Provide a valid outpsut file name --> RDS file")
     }
 
-
 #INPUT!
 dataset <- readRDS(args[["input"]])
 
 #run PCA
-dataset <- runPCA(dataset, method = "prcomp", exprs_values = "logcounts", ncomponents = 10)
+dataset <- runPCA(dataset, method = "prcomp", exprs_values = "logcounts", ncomponents = 50)
 pca <- dataset@reducedDims@listData[["PCA"]]
 #cell batch label vector
 batch_vector <-  as.character(dataset$Batch)

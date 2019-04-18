@@ -51,7 +51,7 @@ if ("cell_type1" %in% colnames(colData(object))){
   
 #entropy over the PCA graph 
 library(scater)
-object <- runPCA(object, method = "prcomp", exprs_values = "logcounts", ncomponents = 10)
+object <- runPCA(object, method = "prcomp", exprs_values = "logcounts", ncomponents = 50)
 
 corrected_space <- as.matrix(object@reducedDims@listData[["PCA"]])
 entropy_pca <- compute_entropy(corrected_space, bool = TRUE, x, batch_vector, N_batches, cell_type_vector, N_cell_types) # <------ FUNCTION

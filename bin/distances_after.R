@@ -17,35 +17,6 @@ if (is.null(args[["output"]])) {
 #input file
 object <- readRDS(args[["input"]])
 
-#remove those batch / cell types present less than X_threshold times
-remove_elements <- function (object, filter_vec, threshold, info){
-  removal_names <- names(table(filter_vec)[table(filter_vec) <= threshold])
-  if (length(removal_names) == 0) print(paste("There is no", info, "with less than", threshold, "cells"))
-  if (length(removal_names) != 0){
-    print(paste("There are", length(removal_names), info,  "with less than", threshold, "cells :", paste(removal_names, collapse = ", "), "removed!"))
-    for(i in 1:length(removal_names)){
-      object <- object[, object$Batch != removal_names[[i]]]
-      object <- object[, object$cell_type1 != removal_names[[i]]]
-    }
-  }
-  return(object)
-}
-
-#remove those batch / cell types present less than X_threshold times from Seurat object.
-#My goal is to unify these 2 functions into 1 but at the moment I'm busy!
-remove_elements_seurat <- function (object, filter_vec, threshold, info){
-  removal_names <- names(table(filter_vec)[table(filter_vec) <= threshold])
-  if (length(removal_names) == 0) print(paste("There is no", info, "with less than", threshold, "cells"))
-  if (length(removal_names) != 0){
-    print(paste("There are", length(removal_names), info,  "with less than", threshold, "cells :", paste(removal_names, collapse = ", "), "removed!"))
-    for(i in 1:length(removal_names)){
-      object <- SubsetData(object, cells.use = object@meta.data[["Batch"]] != removal_names[[i]])
-      object <- SubsetData(object, cells.use = object@meta.data[["cell_type1"]] != removal_names[[i]])
-    }
-  }
-  return(object)
-}
-
 #subset space by batch and by cell type
 subset_space <- function(space, b_vector, N_b){
   colnames(space) <- b_vector
@@ -80,16 +51,10 @@ if (class(object) == "SingleCellExperiment"){
   
   #arguments for similarity calculation
   batch_vector <- as.character(object$Batch)
-  #remove from  vector those cell types with less than threshold times 
-  batch_threshold <- 10
-  object <- remove_elements(object, filter_vec = batch_vector, threshold = batch_threshold, info = "batch/es")
   
   if ("cell_type1" %in% colnames(colData(object))){
     print("The object has cell type annotation")
     cell_type_vector <- as.character(object$cell_type1)
-    #remove from  vector those cell types with less than threshold times 
-    cell_type_threshold = 1
-    object <- remove_elements(object, filter_vec = cell_type_vector, threshold = cell_type_threshold, info = "cell type/s")
   }
   
   #redifine vectors after filtering
@@ -150,23 +115,18 @@ if (class(object) == "SingleCellExperiment"){
 #2) Seurat objects
 if (class(object) == "seurat"){
   library(Seurat)
-  #pre-filtering
+  #vectors for similarity calculation
   batch_vector <- as.character(object@meta.data[["Batch"]])
+  N_batches <- length(unique(batch_vector))
   cell_type_vector <- as.character(object@meta.data[["cell_type1"]])
-  threshold <- 1
-  object <- remove_elements_seurat(object = object, filter_vec = batch_vector, threshold, info = "batch/es")
-  object <- remove_elements_seurat(object = object, filter_vec = cell_type_vector, threshold, info = "cell type/s")
+  N_celltypes <- length(unique(cell_type_vector))
+  
   #embedding before correction
   cca_embedding <- GetCellEmbeddings(object = object, reduction.type = "cca")
   cca_embedding <- t(cca_embedding)
   #embedding after correction
   al_cca_embedding <- GetCellEmbeddings(object = object, reduction.type = "cca.aligned")
   al_cca_embedding <- t(al_cca_embedding)
-  #redo batch and cell type vectors
-  batch_vector <- as.character(object@meta.data[["Batch"]])
-  N_batches <- length(unique(batch_vector))
-  cell_type_vector <- as.character(object@meta.data[["cell_type1"]])
-  N_celltypes <- length(unique(cell_type_vector))
   
   #join before and after embeddings
   embeddings <- list(cca_embedding, al_cca_embedding)
