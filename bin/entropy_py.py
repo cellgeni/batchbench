@@ -30,7 +30,7 @@ def shannon_entropy (x, b_vec, N_b):
     return(-entropy) #the entropy formula is the -sum, this is why we include the minus sign
 
 def save_file_to_csv(results):
-    results.to_csv(args.output, header = True, index = False)
+    results.to_csv(args.output_entropy, header = True, index = False)
 
 def compute_entropy(df, **kwargs):
     #apply function
@@ -39,13 +39,13 @@ def compute_entropy(df, **kwargs):
     print("Entropy calculated!")
     
     results = {'global_entropy':global_entropy, "cell_type_entropy":cell_type_entropy}
-    results = pd.concat(results, axis = 1).reset_index()
+    results = pd.concat(results, axis = 1)
 
     save_file_to_csv(results)
 
 def distribute_datasets(dataset):
     kwargs = {}
-    #batch vector( betch id of each cell)
+    #batch vector(batch id of each cell)
     kwargs['batch_vector'] = dataset.obs['Batch']
     #modify index of batch vector so it coincides with matrix's index
     kwargs['batch_vector'].index = range(0,len(kwargs['batch_vector']))
@@ -59,6 +59,11 @@ def distribute_datasets(dataset):
     #number of cell_types
     kwargs['N_cell_types'] = len(dataset.obs['cell_type1'].astype('category').cat.categories)    
     
+    #save UMAP coordinates
+    #sc.pp.neighbors(dataset, n_neighbors= 15)
+    #sc.tl.umap(dataset, n_components=2)
+    #pd.DataFrame(dataset.obsm['X_umap']).to_csv(args.output_umap, header = True, index = False)
+
     try:
         knn_graph = dataset.uns['neighbors']
         print('BBKNN corrected object!') 
@@ -91,10 +96,9 @@ if __name__== "__main__":
     parser.add_argument("--input", dest='input',
                         help ='h5ad object over which cosine similarities are going to be calculated')
 
-    parser.add_argument('--output', dest='output',
-                        help='cosine similarities for batch and cell type subsets stored in a dictionary')
-
+    parser.add_argument('--output_entropy', dest='output_entropy',
+                        help='entropy for batch and cell type subsets stored in a CSV')
+    
     args = parser.parse_args()
     
     distribute_datasets(read_h5ad(args.input))
-

@@ -32,7 +32,8 @@ def remove_elements(dataset, filter_vec, threshold, info):
     return dataset
 
 def do_the_filtering(dataset, **kwargs):
-    
+    #remove thos cells with no cell type annotation
+    dataset = dataset[dataset.obs['cell_type1'] != "NA"]
     #remove those batches/cell types with less than threshold cells <------FUNCITON!
     print("Dimensions pre-filtering:", dataset.shape)
     dataset = remove_elements(dataset, filter_vec =  kwargs["batch_vector"], threshold = args.batch_threshold , info = "Batch/es")

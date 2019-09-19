@@ -3,7 +3,10 @@
 #libraries
 library(scran)
 library(SingleCellExperiment)
+
+#BiocManager::install("lsa")
 library(lsa)
+
 
 #arguments
 args <- R.utils::commandArgs(asValues=TRUE)
@@ -42,12 +45,13 @@ extract_values <- function(sim_list){
 
 #save results function
 save_results <- function(x){
-  write.table(x, file = args[["output"]], sep = "\t", row.names = FALSE)
+  saveRDS(x, file = args[["output"]])
 }
 
 
 # 1) SCE objects 
 if (class(object) == "SingleCellExperiment"){
+    print("The object is a SingleCellExperiment class object")
   
   #arguments for similarity calculation
   batch_vector <- as.character(object$Batch)
@@ -120,12 +124,16 @@ if (class(object) == "seurat"){
   N_batches <- length(unique(batch_vector))
   cell_type_vector <- as.character(object@meta.data[["cell_type1"]])
   N_celltypes <- length(unique(cell_type_vector))
+
+    # 2.1) Seurat v2 multiCCA
+    if( "cca" %in% names(object@dr)){
+        print("Object corrected by Seurat_v2_multiCCA")
   
   #embedding before correction
-  cca_embedding <- GetCellEmbeddings(object = object, reduction.type = "cca")
+  cca_embedding <- attr(object@dr[["cca"]], "cell.embeddings") 
   cca_embedding <- t(cca_embedding)
   #embedding after correction
-  al_cca_embedding <- GetCellEmbeddings(object = object, reduction.type = "cca.aligned")
+  al_cca_embedding <- attr(object@dr[["cca.aligned"]], "cell.embeddings") 
   al_cca_embedding <- t(al_cca_embedding)
   
   #join before and after embeddings
@@ -153,8 +161,44 @@ if (class(object) == "seurat"){
                            paste0("aft_cca_dist_CELL_aft_", names(table(cell_type_vector)))
                            )
   print(summary(values_df))
-  print("Distances over the Seurat_CCA graph succesful")
+  print("Distances over the Seurat_v2_multiCCA graph succesful")
 
   #save results
   save_results(values_df)
 } 
+}
+
+#2) Seurat objects
+if (class(object) == "Seurat"){
+  library(Seurat)
+  #vectors for similarity calculation
+  batch_vector <- as.character(object@meta.data[["Batch"]])
+  N_batches <- length(unique(batch_vector))
+  cell_type_vector <- as.character(object@meta.data[["cell_type1"]])
+  N_cell_types <- length(unique(cell_type_vector))
+
+    # 2.1) Seurat v3 anchors
+    if( "integrated" %in% names(object@assays)){
+    print("Object corrected by Seurat_v3_anchors")
+
+    space <- as.matrix(object@assays[["integrated"]]@data)
+    
+    similarity_batch_list <- compute_similarity(subset_list = subset_space(space = space, b_vector = batch_vector, N_b = N_batches))
+    similarity_cell_type_list <- compute_similarity(subset_list = subset_space(space = space, b_vector = cell_type_vector, N_b = N_cell_types))
+    similarity_list <- append(similarity_batch_list, similarity_cell_type_list)
+    
+    
+    values_list <- extract_values(similarity_list)
+    
+    #convert list of lists to dataframe
+    values_df <- as.data.frame(t(plyr::ldply(values_list, rbind, .id = NULL)))
+    
+    colnames(values_df) <- c(paste0("Counts_dist_BATCH_aft_", names(table(batch_vector))), 
+                             paste0("Counts_dist_CELL_aft_", names(table(cell_type_vector))))
+    print(summary(values_df))
+    print("Distances over the counts matrix succesful!")
+    #save results
+    save_results(values_df)
+    print("Distances over the Seurat_v3_anchors graph succesful") 
+ }
+

@@ -13,20 +13,19 @@ args <-R.utils::commandArgs(asValues=TRUE)
 if (is.null(args[["input"]])) {
   print("Provide a valid input file name (Batch corrected object) --> RDS file")
 }
-if (is.null(args[["output"]])) {
+if (is.null(args[["output_entropy"]])) {
   print("Provide a valid output file name (Per batch and cell type entropy) --> CSV file")
 }
-if (is.null(args[["output_umap"]])) {
-  print("Provide a valid output file name for the UMAP coordinates --> txt file")
+if (is.null(args[["output_matrix"]])) {
+  print("Provide a valid output file name (Per batch and cell type entropy) --> CSV file")
 }
-
 #input file
 object <- readRDS(args[["input"]])
 
-#umap function
+#umap function (NO LONGER USED)
 umap_coordinates <- function(object, output_umap){
   object <- runUMAP(object, ncomponents= 2, use_dimred = 'PCA', n_dimred = 30)
-  umap <- dataset@reducedDims@listData[["UMAP"]]
+  umap <- object@reducedDims@listData[["UMAP"]]
   write.table(umap, file= output_umap, row.names= colnames(object), col.names=FALSE)
 }
 
@@ -48,7 +47,7 @@ compute_entropy <- function(corrected_space, bool, x, batch_vector, N_batches, c
 }
 
 save_results <- function(x){
-  write.table(x, file = args[["output"]], sep = "\t",  row.names = FALSE)
+  write.table(x, file = args[["output_entropy"]], sep = "\t",  row.names = FALSE)
 }
 
 #arguments for entropy calculation
@@ -63,10 +62,8 @@ if ("cell_type1" %in% colnames(colData(object))){
   
 #entropy over the PCA graph 
 library(scater)
-object <- runPCA(object, method = "prcomp", exprs_values = "logcounts", ncomponents = 50)
+object <- runPCA(object, exprs_values = "logcounts", ncomponents =30)
 
-#(compute UMAP)
-umap_coordinates(dataset, output_umap = args[["output_umap"]])
 
 #continue entropy over the PCA graph 
 corrected_space <- as.matrix(object@reducedDims@listData[["PCA"]])
@@ -87,3 +84,6 @@ result <- cbind(entropy_pca,entropy_counts)
 print(summary(result))
 #write result to a csv
 save_results(result)
+
+#save matrix
+saveRDS(corrected_space, file = args[["output_matrix"]])

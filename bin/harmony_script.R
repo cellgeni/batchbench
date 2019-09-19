@@ -18,13 +18,13 @@ if (is.null(args[["output"]])) {
 dataset <- readRDS(args[["input"]])
 
 #run PCA
-dataset <- runPCA(dataset, method = "prcomp", exprs_values = "logcounts", ncomponents = 50)
+dataset <- runPCA(dataset, method = "prcomp", exprs_values = "logcounts", ncomponents = 30)
 pca <- dataset@reducedDims@listData[["PCA"]]
 #cell batch label vector
 batch_vector <-  as.character(dataset$Batch)
 
 #run Harmony
-dataset@reducedDims@listData[['corrected_embedding']] <- HarmonyMatrix(pca, batch_vector, theta=4)
+dataset@reducedDims@listData[['corrected_embedding']] <- HarmonyMatrix(pca, batch_vector, theta=4, do_pca = F)
 
 print("congratulations, HARMONY worked!!!")
 

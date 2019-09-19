@@ -1,10 +1,8 @@
 #!/usr/bin/env Rscript
 
 #This script is for the calculation of the cosine distances of the datasets prior to batch correction.
-#As some methods correct the PCA space and others the count matrix, distance over both spaces are calculated.
-
+#As some methods correct the PCA space and others the count matrix, distance over both spaces are calculated.i
 #libraries
-library(scran)
 library(SingleCellExperiment)
 library(lsa)
 
@@ -45,9 +43,9 @@ extract_values <- function(sim_list){
 
 #save results function
 save_results <- function(x){
-  write.table(x, file = args[["output"]], sep = "\t", row.names = FALSE)
+ # write.table(x, file = args[["output"]], sep = "\t", row.names = FALSE)
+  saveRDS(x, args[["output"]])
 }
-
 
 #arguments for similarity calculation
 batch_vector <- as.character(object$Batch)
@@ -69,6 +67,12 @@ space <- t(space) #We transpose to avoid code duplication, as pca_graph is cells
 similarity_batch_list <- compute_similarity(subset_list = subset_space(space = space, b_vector = batch_vector, N_b = N_batches))
 similarity_cell_type_list <- compute_similarity(subset_list = subset_space(space = space, b_vector = cell_type_vector, N_b = N_cell_types))
 pca_similarity_list <- append(similarity_batch_list, similarity_cell_type_list)
+#extract values
+pca_values_list <- extract_values(pca_similarity_list)
+#name the list
+names(pca_values_list)<- c(paste0("bef_correct_PCA_dist_BATCH_", names(table(batch_vector))),
+                         paste0("bef_correct_PCA_dist_CELL_", names(table(cell_type_vector))))
+
 
 #1.2) Distance over counts matrix
 space <- assay(object, "logcounts")
@@ -76,22 +80,16 @@ space <- assay(object, "logcounts")
 similarity_batch_list <- compute_similarity(subset_list = subset_space(space = space, b_vector = batch_vector, N_b = N_batches))
 similarity_cell_type_list <- compute_similarity(subset_list = subset_space(space = space, b_vector = cell_type_vector, N_b = N_cell_types))
 counts_similarity_list <- append(similarity_batch_list, similarity_cell_type_list)
+#extract values
+counts_values_list <- extract_values(pca_similarity_list)
+#name the list
+names(counts_values_list)<- c(paste0("bef_correct_Counts_dist_BATCH_", names(table(batch_vector))),
+                         paste0("bef_correct_Counts_dist_CELL_", names(table(cell_type_vector))))
 
-#append both lists
-general_list <- append(pca_similarity_list,counts_similarity_list)
-#extract values from matricesz
-values_list <- extract_values(general_list)
+                                                                           
+results_list <- list(pca_values_list, counts_values_list)
 
-#convert list of lists to dataframe
-values_df <- as.data.frame(t(plyr::ldply(values_list, rbind, .id = NULL)))
-#name dataframe
-colnames(values_df) <- c(paste0("bef_correct_PCA_dist_BATCH", names(table(batch_vector))), 
-                         paste0("bef_correct_PCA_dist_CELL", names(table(cell_type_vector))), 
-                         paste0("bef_correct_Counts_dist_BATCH", names(table(batch_vector))),
-                         paste0("bef_correct_Counts_dist_CELL", names(table(cell_type_vector))))
-                         
-print(summary(values_df))
+
 print("Distances over the Pca graph, and counts matrix (prior to batch correction) succesful!")
 #save results
-save_results(values_df)
-
+save_results(results_list)

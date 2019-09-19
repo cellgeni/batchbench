@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-  
+
 #libraries
 library(SingleCellExperiment) #object processing
 library(limma)

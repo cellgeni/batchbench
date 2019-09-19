@@ -3,7 +3,7 @@
 #modules
 import numpy as np
 import pandas as pd
-import scanpy.api as sc 
+import scanpy.api as sc
 import os
 import sys
 
@@ -36,35 +36,34 @@ def distribute_datasets(dataset):
     try:
         neighbors = dataset.uns['neighbors']
         print('BBKNN corrected object!')
-                                                                                                     
-        save_umap(umap_bbknnn_after(dataset), out_name = args.output_1)
-        save_umap(umap_bbknnn_before(dataset), out_name = args.output_2)
-    
+
+        save_umap(umap_bbknnn_after(dataset), out_name = args.output_bbknn)
+
     except KeyError:
-        
+
         print('Scanorama corrected object!')
-        save_umap(umap_scanorama(dataset), out_name = args.output_2)
-        
+        save_umap(umap_scanorama(dataset), out_name = args.output_scano)
+
 #read file
 def read_h5ad(args):
     #read input h5ad
     dataset = sc.read(args.input)
     print("File read!")
-    
+
     distribute_datasets(dataset)
 
 #this is the main entry point to the compiler to go through when reading the script
 if __name__== "__main__":
-    
+
     parser = argparse.ArgumentParser(description='Input/Output files')
 
     parser.add_argument("--input", dest='input',
                         help ='Batch corrected object --> .h5ad file')
-    
-    parser.add_argument('--output_1', dest='output_1',
-                        help='UMAP coordinates of a batch corrected object --> .csv file')
-    parser.add_argument('--output_2', dest='output_2',
-                        help='UMAP coordinates before batch correction --> .csv file')
+
+    parser.add_argument('--output_bbknn', dest='output_bbknn',
+                        help='UMAP coordinates of a BBKNN batch corrected object --> .csv file')
+    parser.add_argument('--output_scano', dest='output_scano',
+                        help='UMAP coordinates of a batch correctec object by other method --> .csv file')
     args = parser.parse_args()
-    
+
     read_h5ad(args)

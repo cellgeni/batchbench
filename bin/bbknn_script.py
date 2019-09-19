@@ -18,9 +18,9 @@ def save_corrected_object(dataset):
 def main(dataset):
     '''This function runs PCA, runs BBKNN and saves the corrected object'''
     #compute PCA
-    sc.tl.pca(dataset, n_comps = 10)
+    sc.tl.pca(dataset, n_comps = 15)
     #run bbknn
-    dataset_bbknn = bbknn.bbknn(dataset,batch_key='Batch', neighbors_within_batch= 10, n_pcs=10, save_knn=True, copy=True)
+    dataset_bbknn = bbknn.bbknn(dataset,batch_key='Batch', neighbors_within_batch= 10, n_pcs=15, copy=True)
     print("BBKNN done!")
 
     save_corrected_object(dataset_bbknn)

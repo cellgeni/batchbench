@@ -1,8 +1,4 @@
 #!/usr/bin/env Rscript
-
-#libraries
-#library(SingleCellExperiment) #object processing
-#library(scater) #object processing
 library(scran) #mnnCorrect
 
 args <- R.utils::commandArgs(asValues=TRUE)

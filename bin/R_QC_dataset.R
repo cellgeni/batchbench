@@ -20,9 +20,9 @@ if (is.null(args[["output"]])) {
 #input file
 object <- readRDS(args[["input"]])
 #parameters
-batch_vector <- object$Batch
+batch_vector <- as.character(object$Batch)
 batch_threshold = as.integer(args[["batch_threshold"]])
-cell_type_vector <- object$cell_type1
+cell_type_vector <- as.character(object$cell_type1)
 cell_type_threshold = as.integer(args[["cell_type_threshold"]])
 
 print("Dimensions pre-filtering:")
@@ -42,6 +42,8 @@ remove_elements <- function (object, filter_vec, threshold, info){
   return(object)
 }
 
+#remove cells with no cell type annotation
+object <- object[,!is.na(object$cell_type1)]
 #apply function
 object <- remove_elements(object, filter_vec = batch_vector, threshold = batch_threshold, info = "Batch/es")
 object <- remove_elements(object, filter_vec = cell_type_vector, threshold = cell_type_threshold, info = "Cell type/s")
