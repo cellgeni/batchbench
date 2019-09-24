@@ -1,6 +1,7 @@
 FROM r-base:3.6.1
+#
+RUN apt-get update --fix-missing && apt-get install -y procps wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion build-essential libcurl4-gnutls-dev libssl-dev libxml2-dev libhdf5-dev
 
-RUN apt-get update --fix-missing && apt-get install -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion build-essential libcurl4-gnutls-dev libssl-dev libxml2-dev libhdf5-dev
 
 RUN mkdir -p /root/.conda
 
