@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-  
-#modules
 import numpy as np
 import pandas as pd
 import scanpy.api as sc
@@ -12,27 +10,22 @@ import sys
 
 import argparse
 
-def correct(datasets):
+def save_h5ad(dataset):
+    dataset.write(args.output)
+    
+def correct_scanorama(datasets):
     ''' This function runs Scanorama and saves the corrected object to h5ad file'''
     #Scanorama
     corrected = scanorama.correct_scanpy(datasets)
-
     #merge Scanorama corrected object
     corrected_dataset = corrected[0].concatenate(corrected[1:], join="inner", batch_key = 'Batch')
     print("Scanorama worked!")
-
     #save Scanorama corrected object
-    corrected_dataset.write(args.output)
-    print("Corrected object saved!")
+    save_h5ad(corrected_dataset)
 
 
-
-def main(args):
-    '''This function reads an h5ad file, splits the file into its batches and calls the correct function '''
-    #read input h5ad
-    dataset = sc.read(args.input)
-    print("File read!")
-
+    
+def subset_by_batches(dataset):
     #subset the dataset by batches
     N_batches = len(dataset.obs['Batch'].astype('category').cat.categories)
     datasets = []
@@ -40,9 +33,13 @@ def main(args):
         batch = dataset[dataset.obs['Batch'] == dataset.obs['Batch'].cat.categories[i]]
         datasets.append(batch)
 
-    print(datasets)
-    correct(datasets)
+    correct_scanorama(datasets)    
 
+def read_h5ad(file):
+    dataset = sc.read(file)
+    
+    subset_by_batches(dataset)
+    
 #this is the main entry point to the compiler to go through when reading the script
 if __name__== "__main__":
 
@@ -53,6 +50,5 @@ if __name__== "__main__":
 
     parser.add_argument('--output', dest='output',
                         help='Scanorama corrected object.Scanorama corrects the expression matrix')
-
     args = parser.parse_args()	
-    main(args)
+    read_h5ad(args.input)
