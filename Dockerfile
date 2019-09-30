@@ -27,3 +27,5 @@ RUN Rscript -e 'BiocManager::install(c("limma", "SummarizedExperiment", "SingleC
 
 # install github packages
 RUN Rscript -e 'devtools::install_github(c("immunogenomics/harmony", "LTLA/beachmat", "MarioniLab/DropletUtils", "cellgeni/sceasy", "mojaveazure/loomR"))'
+
+ENV OPENBLAS_CORETYPE=nehalem
