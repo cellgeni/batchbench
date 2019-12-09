@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import numpy as np
 import pandas as pd
-import scanpy.api as sc
+import scanpy as sc
 import argparse
 
 def save_umap(umap_df, out_name):
@@ -55,12 +55,14 @@ def distribute_datasets(dataset):
             print('Counts matrix batch corrected object!')
             save_umap(umap_counts_mat(dataset), out_name = args.output)
 
-#read file
-def read_h5ad(args):
-    dataset = sc.read(args.input)
-    distribute_datasets(dataset)
+#def save_corrected_h5ad(dataset):
+#	dataset.write(args.output_h5ad)
 
-#this is the main entry point to the compiler to go through when reading the script
+def read_h5ad(args):
+	dataset = sc.read(args.input)
+	distribute_datasets(dataset)
+#	save_corrected_h5ad(dataset)
+
 if __name__== "__main__":
 
     parser = argparse.ArgumentParser(description='Input/Output files')
@@ -71,8 +73,9 @@ if __name__== "__main__":
     parser.add_argument('--output', dest='output',
                         help='UMAP coordinates of a batch corrected object --> .csv file')
     
-    #parser.add_argument('--output_scano', dest='output_scano',
-                        #help='UMAP coordinates before batch correction --> .csv file')
+ #   parser.add_argument('--output_h5ad', dest='output_h5ad',
+  #                      help='h5ad batch corrected object, saved for additional analysis --> .h5ad file')
+    
     args = parser.parse_args()
 
     read_h5ad(args)

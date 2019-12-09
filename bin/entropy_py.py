@@ -3,7 +3,7 @@
 #modules
 import numpy as np
 import pandas as pd
-import scanpy.api as sc #should it be .API?
+import scanpy as sc 
 
 import anndata
 import os
@@ -34,12 +34,12 @@ def save_file_to_csv(results):
 
 def compute_entropy(df, **kwargs):
     #apply function
-    global_entropy = df.apply(shannon_entropy, axis=0, args=(kwargs['batch_vector'],kwargs['N_batches']))
+    batch_entropy = df.apply(shannon_entropy, axis=0, args=(kwargs['batch_vector'],kwargs['N_batches']))
     cell_type_entropy = df.apply(shannon_entropy, axis=0, args=(kwargs['cell_type_vector'] ,kwargs['N_cell_types']))
     print("Entropy calculated!")
     
-    results = {'global_entropy':global_entropy, "cell_type_entropy":cell_type_entropy}
-    results = pd.concat(results, axis = 1)
+    results = {'Batch_entropy': batch_entropy, "Cell_type_entropy":cell_type_entropy}
+    results = pd.concat(results, axis = 1, keys = ['Batch_entropy', 'Cell_type_entropy'])
 
     save_file_to_csv(results)
 
@@ -69,7 +69,7 @@ def distribute_datasets(dataset):
         print('BBKNN corrected object!') 
     
     except KeyError:
-        print('Scanorama corrected object!')
+        #Both: pre corrected logcounts and Scanorama counts enter through this way.
         #compute neighbors
         sc.tl.pca(dataset, n_comps = 50)
         sc.pp.neighbors(dataset, n_neighbors = 30, knn = True)

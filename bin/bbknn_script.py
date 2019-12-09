@@ -4,7 +4,7 @@
 import bbknn
 import numpy as np
 import pandas as pd
-import scanpy.api as sc
+import scanpy as sc
 import anndata
 import os
 import scipy
@@ -30,8 +30,6 @@ def read_h5ad(dataset):
     return sc.read(dataset)
     print("File read!")
  
-    
-#this is the main entry point to the compiler to go through when reading the script
 if __name__== "__main__":
 
     parser = argparse.ArgumentParser(description='Input/Output files')

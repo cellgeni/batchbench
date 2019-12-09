@@ -10,14 +10,14 @@ if (is.null(args[["input"]])) {
   print("Provide a valid input file name (Batch corrected object) --> RDS file")
 }
 if (is.null(args[["output"]])) {
-  print("Provide a valid output file name (UMAP coordinates of batch-corrected object) --> txt file")
+  print("Provide a valid output file name (UMAP coordinates of batch-corrected object) --> CSV file")
 }
 
 #umap function
 umap_coordinates <- function(object, dr_type,  output_umap){
   object <- runUMAP(object, ncomponents = 2, use_dimred = dr_type, n_neighbors = 30)
   umap <- object@reducedDims@listData[["UMAP"]]
-  write.table(umap, file= output_umap, sep = "\t",  row.names= colnames(object), col.names = paste0("UMAP_", c(1:ncol(umap))))
+  write.csv(umap, file= output_umap, sep = "",  row.names= colnames(object), col.names = paste0("UMAP_", c(1:ncol(umap))))
 }
 
 #umap_seurat_coordinates <- function(object, dr_type,  output_umap){
@@ -54,8 +54,6 @@ if (class(object) == "seurat"){
     library(Seurat)
     print("The input object is a Seurat object")
     print("Object corrected by Seurat_v2_multiCCA")
-    #umap_seurat_coordinates(object, dr_type = "cca", output_umap = args[["output"]])
-    #umap_seurat_coordinates(object, dr_type = "cca.aligned", output_umap = args[["output"]])
     #convert Seurat v2 to SCE object
     object <- SingleCellExperiment(assays = list(logcounts = as.matrix(object@data)),
                      colData = as.data.frame(object@meta.data) ,

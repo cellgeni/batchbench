@@ -10,12 +10,13 @@ args <-R.utils::commandArgs(asValues=TRUE)
 if (is.null(args[["input"]])) {
   print("Provide a valid input file name (Batch corrected object) --> RDS file")
 }
-if (is.null(args[["output_entropy"]])) {
+if (is.null(args[["output"]])) {
   print("Provide a valid output file name (Per batch and cell type entropy) --> CSV file")
 }
-if (is.null(args[["output_matrix"]])) {
-  print("Provide a valid output file name for the matrix. RDS file")
-}
+#if (is.null(args[["output_matrix"]])) {
+#  print("Provide a valid output file name for the matrix. RDS file")
+#}
+
 #input file
 object <- readRDS(args[["input"]])
 #entropy function
@@ -31,12 +32,12 @@ compute_entropy <- function(corrected_space, bool, x, batch_vector, N_batches, c
   batch_entropy <- apply(knn_graph, 1, function(x) {shannon_entropy (x, batch_vector, N_batches)})
   celltype_entropy <- apply(knn_graph, 1, function(x) {shannon_entropy (x, cell_type_vector, N_cell_types)})
   entropy <- cbind(batch_entropy,celltype_entropy)
-  names(entropy) <- c("batch_entropy", "cell_type_entropy")
+  names(entropy) <- c("Batch_entropy", "Cell_type_entropy")
   return(entropy)
 }
 
 save_results <- function(x, col_names){
-  write.table(x, file = args[["output_entropy"]], sep = "\t", row.names = FALSE, col.names = col_names)
+  write.csv(x, file = args[["output"]], sep = "", row.names = FALSE, col.names = col_names)
 }
 
 # 1) SCE objects 
@@ -44,7 +45,7 @@ if (class(object) == "SingleCellExperiment"){
   print("The input object is a Single Cell Experiment class object")
   
   #Calculate entropy
-  batch_vector <- colData(object)$Batch
+  batch_vector <- as.character(object$Batch)
   N_batches <- length(unique(batch_vector))
   if ("cell_type1" %in% colnames(colData(object))){
     print("The object has cell type annotation")
@@ -58,7 +59,7 @@ if (class(object) == "SingleCellExperiment"){
     col_names <- c("PCA_batch_entropy", "PCA_cell_type_entropy")
     save_results(compute_entropy(corrected_space, bool = TRUE, x, batch_vector, N_batches, cell_type_vector, N_cell_types), col_names) # <------ FUNCTION
     print("Entropy calculated in PCA space!")
-    saveRDS(corrected_space, file = args[["output_matrix"]])
+    #saveRDS(corrected_space, file = args[["output_matrix"]])
     }
   
   # 1.2) methods that correct expression matrix
@@ -67,7 +68,7 @@ if (class(object) == "SingleCellExperiment"){
     col_names <- c("Counts_batch_entropy", "Counts_cell_type_entropy")
     save_results(compute_entropy(corrected_space, bool = FALSE, x, batch_vector, N_batches, cell_type_vector, N_cell_types), col_names) # <------ FUNCTION
     print("Entropy calculated over counts matrix!")
-    saveRDS(corrected_space, file = args[["output_matrix"]])
+    #saveRDS(corrected_space, file = args[["output_matrix"]])
   }
 }
 #2) Seurat objects
@@ -99,7 +100,7 @@ if (class(object) == "seurat"){
   
         print("Entropy calculated over CCA space of Seurat object!")
         save_results(entropy_df, col_names)
-        saveRDS(aligned_cca_matrix, file = args[["output_matrix"]])
+        #saveRDS(aligned_cca_matrix, file = args[["output_matrix"]])
         print("Congratulations, entropy calculated over Seurat_v2_multiCCA object")
     }
 }   
@@ -124,6 +125,6 @@ if (class(object) == "Seurat"){
     col_names <- c("Seurat_v3_Batch_entropy", "Seurat_v3_Cell_type_entropy")
     save_results(compute_entropy(corrected_space = space, bool = FALSE, x, batch_vector, N_batches, cell_type_vector, N_cell_types), col_names)# <------ 
     print("Congratulations, entropy calculated over Seurat_v3_anchors object")
-    saveRDS(space, file = args[["output_matrix"]])
+    #saveRDS(space, file = args[["output_matrix"]])
     } 
 }

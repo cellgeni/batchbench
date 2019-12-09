@@ -1,55 +1,96 @@
 #!/usr/bin/env Rscript
 
-#libraries
-
 args <- R.utils::commandArgs(asValues=TRUE)
 
-if (is.null(args[["input"]])) {
-  print("Provide a valid input file name --> RDS file")
+if (is.null(args[["input"]])) {print("Provide a valid input file name --> RDS file")}
+if (is.null(args[["bt_thres"]])) {
+  print("Provide a valid bt_thres value --> float. Minimum proportion of cells required for a BATCH to be present")
   }
-if (is.null(args[["batch_threshold"]])) {
-  print("Provide a valid batch_threshold value --> integer")
-  }
-if (is.null(args[["cell_type_threshold"]])) {
-  print("Provide a valid cell_type_threshold value --> integer")
-  }
-if (is.null(args[["output"]])) {
-  print("Provide a valid outpsut file name --> RDS file")
-    }
+if (is.null(args[["ct_thres"]])) {
+  print("Provide a valid ct_thres value --> float. Minimum proportion of cells required for a CELL TYPE to be present")
+}
+if (is.null(args[["min_genes"]])) {
+  print("Provide a valid min_genes value --> integer. Minimum number of genes to be expressed in a cell")
+}
+if (is.null(args[["min_cells"]])) {
+  print("Provide a valid min_cells value --> integer. Minimum number of cells for a gene to be expressed in")
+}
+if (is.null(args[["output"]])) {print("Provide a valid outpsut file name --> RDS file")}
 
-#input file
-object <- readRDS(args[["input"]])
+#inputs
+dataset <- readRDS(args[["input"]])
+bt_thres <- as.numeric(args[["bt_thres"]])
+ct_thres <- as.numeric(args[["ct_thres"]])
+min_genes <- as.integer(args[["min_genes"]])
+min_cells <- as.integer(args[["min_cells"]])
 #parameters
-batch_vector <- as.character(object$Batch)
-batch_threshold = as.integer(args[["batch_threshold"]])
-cell_type_vector <- as.character(object$cell_type1)
-cell_type_threshold = as.integer(args[["cell_type_threshold"]])
+batch_vector <- as.character(dataset$Batch)
+cell_type_vector <- as.character(dataset$cell_type1)
 
-print("Dimensions pre-filtering:")
-print(dim(object))
-
+#print table with batches/cell types filtering information
+print_filtering<- function(dataset, filter_vec, threshold, meta_name){
+  
+  cell_count <- table(filter_vec)[order(table(filter_vec), decreasing = T)]
+  
+  print(paste("**", meta_name ,  "containing less than:",  threshold,  "of total cells are removed."))
+  print(paste("** TABLE:", meta_name, "filtered based on our threshold:")) 
+  #dataframe informing about the filtering about to be done
+  exclude_df <- data.frame("X_X" = names(cell_count), 
+             "n_cells" = as.vector(cell_count), 
+             "percent_cells" = as.vector(cell_count)/ncol(dataset), 
+             "Excluded"= as.vector(cell_count)/ncol(dataset) < threshold
+             )
+  names(exclude_df) <- c(meta_name, "n_cells", "percent_cells", "Excluded")
+  print(exclude_df)
+  
+  removal_names <- exclude_df[meta_name][exclude_df["Excluded"] == T]
+  return(removal_names)
+}
+pre_processing <- function(dataset, min_genes, min_cells){
+  #QC pre processing funciton to remove: cells annotated as NA in batch or cell type, 
+	#genes expressed in less than min_cells,and cells with less than min_genes expressed.
+	n_NAs_b <- length(is.na(as.character(dataset$Batch))[is.na(as.character(dataset$Batch)) == T])
+ 	dataset <- dataset[,!is.na(as.character(dataset$Batch))]
+	print(paste0("Cells annotated as NA for dataset$Batch = ", n_NAs_b, ". Removed"))
+	
+	n_NAs_ct <- length(is.na(as.character(dataset$cell_type1))[is.na(as.character(dataset$cell_type1)) == T])
+ 	dataset <- dataset[,!is.na(as.character(dataset$cell_type1))]
+	print(paste0("Cells annotated as NA for dataset$cell_type1 = ", n_NAs_ct, ". Removed"))
+	
+  	dataset <- dataset[apply(logcounts(dataset), 1, function(x) sum(x > 0) >= min_cells), 
+                     apply(logcounts(dataset), 2, function(x) sum(x > 0) >= min_genes)]
+  
+  
+  	print(paste("** CELLS with less than", min_genes, "genes expressed filtered out."))
+  	print(paste("** GENES expressed in less than", min_cells, "cells filtered out."))
+  
+  	print("** Dimensions after preprocessing:")
+  	print(dim(dataset))
+  	return(dataset)
+}
 #remove those batch / cell types present less than X_threshold times
-remove_elements <- function (object, filter_vec, threshold, info){
-  removal_names <- names(table(filter_vec)[table(filter_vec) <= threshold])
-  if (length(removal_names) == 0) print(paste("There is no", info, "with less than", threshold, "cells"))
-  if (length(removal_names) != 0){
-    print(paste("There are", length(removal_names), info,  "with less than", threshold, "cells :", paste(removal_names, collapse = ", "), "removed!"))
+remove_elements <- function (dataset, filter_vec, threshold, meta_name){
+  removal_names <- print_filtering(dataset, filter_vec, threshold, meta_name)
+  
     for(i in 1:length(removal_names)){
-      object <- object[, object$Batch != removal_names[[i]]]
-      object <- object[, object$cell_type1 != removal_names[[i]]]
+      if(length(removal_names) == 0){next()}
+      else{
+        dataset <- dataset[, dataset$Batch != removal_names[[i]]]
+        dataset <- dataset[, dataset$cell_type1 != removal_names[[i]]]
+      }
     }
-  }
-  return(object)
+  
+  return(dataset)
 }
 
-#remove cells with no cell type annotation
-object <- object[,!is.na(object$cell_type1)]
-#apply function
-object <- remove_elements(object, filter_vec = batch_vector, threshold = batch_threshold, info = "Batch/es")
-object <- remove_elements(object, filter_vec = cell_type_vector, threshold = cell_type_threshold, info = "Cell type/s")
-
-print("Dimensions post-filtering:")
-print(dim(object))
+print("** Dimensions pre-filtering:")
+print(dim(dataset))
+#apply functions!
+dataset <- pre_processing(dataset, min_genes = min_genes, min_cells = min_cells)
+dataset <- remove_elements(dataset, filter_vec = as.character(dataset$Batch), threshold = bt_thres, meta_name = "Batch/es")
+dataset <- remove_elements(dataset, filter_vec = as.character(dataset$cell_type1), threshold = ct_thres, meta_name = "Cell type/s")
+print("** Dimensions post-filtering:")
+print(dim(dataset))
 
 #save output
-saveRDS(object, args[["output"]])
+saveRDS(dataset, args[["output"]])

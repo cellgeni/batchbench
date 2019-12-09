@@ -3,7 +3,6 @@
 #libraries
 library(scater) #object processing
 library(harmony) #Harmony
-library(magrittr) #Harmony
 
 args <- R.utils::commandArgs(asValues=TRUE)
 
@@ -18,7 +17,7 @@ if (is.null(args[["output"]])) {
 dataset <- readRDS(args[["input"]])
 
 #run PCA
-dataset <- runPCA(dataset, method = "prcomp", exprs_values = "logcounts", ncomponents = 30)
+dataset <- runPCA(dataset, exprs_values = "logcounts", ncomponents = 25)
 pca <- dataset@reducedDims@listData[["PCA"]]
 #cell batch label vector
 batch_vector <-  as.character(dataset$Batch)

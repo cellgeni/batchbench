@@ -1,5 +1,7 @@
 #!/usr/bin/env Rscript
-library(batchelor) #mnnCorrect deprecated in scran
+
+#library(scran) #fastMNN is depricated in scran, now on Batchelor package
+library(batchelor)
 
 args <- R.utils::commandArgs(asValues=TRUE)
 
@@ -13,20 +15,22 @@ if (is.null(args[["output"]])) {
 dataset <- readRDS(args[["input"]])
 
 #create a list of the batches in the dataset
-#len <- length(names(table(dataset$Batch)))
 batch_vector <- as.character(dataset$Batch)
 len <- length(table(as.character(batch_vector)))
 
 batch_list <- lapply(1:len, function(x) {logcounts(dataset[, batch_vector == names(table(batch_vector))[x]])})
 
 t1 = Sys.time()
-#run mnnCorrect
-corrected <- do.call('mnnCorrect', c(batch_list, c(k=30, sigma=0.1, cos.norm.in=TRUE, svd.dim=2)))
-#append the corrected expression matrix to object ( in the samle column name order as logcounts(dataset)) 
-assay(dataset, "corrected") <- assay(corrected, "corrected")[, colnames(assay(dataset, "logcounts"))]
+
+#run fastMNN
+correction <- do.call('fastMNN', c(batch_list, c(k=30, d = 25,  cos.norm=T,  pc.input = F)))
+
+#attach the batch corrected low_d embedding to reducedDims of the SCE object
+dataset@reducedDims@listData[['corrected_embedding']] <- correction@reducedDims@listData[["corrected"]]
 
 t2 = Sys.time()
 print(t2 - t1)
  
 saveRDS(dataset, file = args[["output"]])
 print("congratulations, this worked!!!")
+

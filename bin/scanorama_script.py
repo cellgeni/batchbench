@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import numpy as np
 import pandas as pd
-import scanpy.api as sc
+import scanpy as sc
 import scanorama
 import anndata
 import os
@@ -13,27 +13,29 @@ import argparse
 def save_h5ad(dataset):
     dataset.write(args.output)
     
-def correct_scanorama(datasets):
+def correct_scanorama(dataset_list, cell_metadata):
     ''' This function runs Scanorama and saves the corrected object to h5ad file'''
     #Scanorama
-    corrected = scanorama.correct_scanpy(datasets)
+    corrected = scanorama.correct_scanpy(dataset_list)
     #merge Scanorama corrected object
     corrected_dataset = corrected[0].concatenate(corrected[1:], join="inner", batch_key = 'Batch')
     print("Scanorama worked!")
-    #save Scanorama corrected object
+    #append metadata
+    corrected_dataset.obs = cell_metadata
+
     save_h5ad(corrected_dataset)
 
 
     
 def subset_by_batches(dataset):
     #subset the dataset by batches
-    N_batches = len(dataset.obs['Batch'].astype('category').cat.categories)
-    datasets = []
-    for i in range(0, N_batches):
-        batch = dataset[dataset.obs['Batch'] == dataset.obs['Batch'].cat.categories[i]]
-        datasets.append(batch)
-
-    correct_scanorama(datasets)    
+    batch_names = dataset.obs['Batch'].astype('category').cat.categories
+    N_batches = len(batch_names)
+    #save metadata
+    cell_metadata = dataset.obs
+    #subset dataset by batches
+    dataset_list = [dataset[dataset.obs['Batch'] == batch_names[i]] for i in range(0, N_batches)]
+    correct_scanorama(dataset_list, cell_metadata)    
 
 def read_h5ad(file):
     dataset = sc.read(file)
