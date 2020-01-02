@@ -27,6 +27,10 @@ correction <- do.call('fastMNN', c(batch_list, c(k=30, d = 25,  cos.norm=T,  pc.
 
 #attach the batch corrected low_d embedding to reducedDims of the SCE object
 dataset@reducedDims@listData[['corrected_embedding']] <- correction@reducedDims@listData[["corrected"]]
+#add columnnames of embedding
+colnames(dataset@reducedDims@listData[['corrected_embedding']]) <- paste0("PC_", c(1:ncol(dataset@reducedDims@listData[['corrected_embedding']])))
+#order cells of embedding as expression matrix cells
+dataset@reducedDims@listData[["corrected_embedding"]] <- dataset@reducedDims@listData[["corrected_embedding"]][colnames(logcounts(dataset)), ]
 
 t2 = Sys.time()
 print(t2 - t1)

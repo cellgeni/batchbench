@@ -24,6 +24,8 @@ batch_vector <-  as.character(dataset$Batch)
 
 #run Harmony
 dataset@reducedDims@listData[['corrected_embedding']] <- HarmonyMatrix(pca, batch_vector, theta=4, do_pca = F)
+#Harmony outputs empty rownames for corrected_embedding. Add rownames
+rownames(dataset@reducedDims@listData[['corrected_embedding']]) <- colnames(dataset)
 
 print("congratulations, HARMONY worked!!!")
 
