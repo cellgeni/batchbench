@@ -57,9 +57,9 @@ pre_processing <- function(dataset, min_genes, min_cells){
  	dataset <- dataset[,!is.na(as.character(dataset$cell_type1))]
 	print(paste0("Cells annotated as NA for dataset$cell_type1 = ", n_NAs_ct, ". Removed"))
 	
-  	dataset <- dataset[apply(logcounts(dataset), 1, function(x) sum(x > 0) >= min_cells), 
-                     apply(logcounts(dataset), 2, function(x) sum(x > 0) >= min_genes)]
-  
+  	dataset <- dataset[apply(logcounts(dataset), 1, function(x) sum(x > 0) >= min_cells),] 
+        dataset <- dataset[, apply(logcounts(dataset), 2, function(x) sum(x > 0) >= min_genes)]
+ 	#Note: we split the apply by axis to find equivalency with the Py_QC.py script  
   
   	print(paste("** CELLS with less than", min_genes, "genes expressed filtered out."))
   	print(paste("** GENES expressed in less than", min_cells, "cells filtered out."))
