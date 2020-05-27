@@ -20,10 +20,10 @@ RUN conda install python=${PYTHON_VERSION}
 RUN pip install scipy scanpy bbknn scanorama
 
 # Install other CRAN
-RUN Rscript -e 'install.packages(c("Seurat", "rJava", "umap","ggplot2", "ggfortify", "Rmagic", "BiocManager", "devtools","lsa","uwot" ), dependencies = TRUE)'
+RUN Rscript -e 'install.packages(c("Seurat", "rJava", "umap","ggplot2", "ggfortify", "Rmagic", "BiocManager", "devtools","lsa","uwot", "dplyr"), dependencies = TRUE)'
 
 # Install Bioconductor packages
-RUN Rscript -e 'BiocManager::install(c("limma", "SummarizedExperiment", "SingleCellExperiment", "LoomExperiment", "Rhdf5lib", "scater", "scran", "RUVSeq", "sva", "MultiAssayExperiment", "batchelor"))'
+RUN Rscript -e 'BiocManager::install(c("limma", "SummarizedExperiment", "SingleCellExperiment", "LoomExperiment", "Rhdf5lib", "scater", "scran", "RUVSeq", "sva", "MultiAssayExperiment", "batchelor", "SC3"))'
 
 # install github packages
 RUN Rscript -e 'devtools::install_github(c("immunogenomics/harmony", "LTLA/beachmat", "MarioniLab/DropletUtils", "cellgeni/sceasy", "mojaveazure/loomR"))'
