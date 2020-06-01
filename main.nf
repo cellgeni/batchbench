@@ -21,13 +21,14 @@ process get_datasets {
     	output:
     	//set val(datasetname), file('*.h5ad') into ch_QC_h5ad
     	set val(datasetname), file('*rds') into QC_RDS_CH
-    	
+    
+		
     	shell:
     	'''
     	#pyfile="!{params.datadir}/!{datasetname}.h5ad" #input file can be provided in rds format only
     	Rfile="!{params.data_dir}/!{datasetname}.rds"
     	if [[ ! -e $Rfile ]]; then
-    	  echo "Please check existence of $pyfile and $Rfile"
+    	  echo "Please check existence of $Rfile"
     	  false
     	fi
     	#ln -s $pyfile .
@@ -49,10 +50,15 @@ process QC_rds{
 	set val(datasetname), file('QC.*.rds') into SCE2H5AD_INPUT, HARMONY_METHOD, LIMMA_METHOD, COMBAT_METHOD, SEURAT3_METHOD, MNNCORRECT_METHOD, FASTMNN_METHOD
         set val(datasetname), val('logcounts'), file("QC.*.rds") into LOGCOUNTS_ENTROPY
 	
-	shell:
-        '''
-        R_QC_dataset.R --input !{datain} --bt_thres 0 --ct_thres 0 --min_genes 0 --min_cells 0 --output QC.!{datasetname}.rds
-        '''
+        """
+        R_QC_dataset.R\
+		--input ${datain}\
+		--bt_thres ${params.QC_rds.batch_thres}\
+		--ct_thres ${params.QC_rds.celltype_thres}\
+		--min_genes ${params.QC_rds.min_genes}\
+		--min_cells ${params.QC_rds.min_cells}\
+		--output QC.${datasetname}.rds
+        """
 }
 
 // convert Sce objects to H5ad for the python tools
@@ -67,10 +73,12 @@ process h5ad2sce {
 	output:
  	set val(datasetname), file("*.h5ad") into BBKNN_METHOD, SCANORAMA_METHOD
 	
-	shell:
-	'''
-	convert_sce2h5ad.R --input !{datain} --assay_name logcounts --output QC.!{datasetname}.h5ad
-	''' 	
+	"""
+	convert_sce2h5ad.R\
+		 --input ${datain}\
+		 --assay_name ${params.assay_name}\
+		 --output QC.${datasetname}.h5ad
+	""" 	
 }
 
 // run BBKNN method
@@ -86,10 +94,14 @@ process BBKNN {
 	output:
         set val(datasetname), val('bbknn'), file('bbknn.*.h5ad') into BBKNN_ENTROPY
         
-	shell:
-        '''
-        bbknn_method.py --input !{datain} --output bbknn.!{datasetname}.h5ad
-        '''
+        """
+        bbknn_method.py\
+		--input ${datain}\
+		--batch_key ${params.batch_key}\
+		--n_pcs ${params.BBKNN.n_pcs}\
+		--n_neighbours ${params.BBKNN.n_neighbours}\
+		--output bbknn.${datasetname}.h5ad
+        """
 }
 
 // run Scanorama method
@@ -105,10 +117,12 @@ process Scanorama {
 	output:
      	set val(datasetname), val('scanorama'), file('scanorama.*.h5ad') into SCANORAMA_ENTROPY
      	
-	shell:
-    	'''
-     	scanorama_method.py --input !{datain} --output scanorama.!{datasetname}.h5ad
-     	'''
+    	"""
+     	scanorama_method.py\
+		--input ${datain}\
+		--batch_key ${params.batch_key}\
+		--output scanorama.${datasetname}.h5ad
+     	"""
  }
 
 // merge python tool channels 
@@ -127,10 +141,13 @@ process Harmony {
 	output:
 	set val(datasetname), val('harmony'), file('harmony.*.rds') into HARMONY_ENTROPY, HARMONY_2H5AD
 	
-	shell:
-	'''
-	harmony_method.R --input !{datain} --output harmony.!{datasetname}.rds
-	'''
+	"""
+	harmony_method.R\
+		--input ${datain}\
+		--assay_name ${params.assay_name}\
+		--n_pcs ${params.harmony.n_pcs}\
+		--output harmony.${datase$name}.rds
+	"""
 }
 
 // run Limma method
@@ -145,10 +162,12 @@ process Limma {
     	
 	output:
     	set val(datasetname), val('limma'), file('limma.*.rds') into LIMMA_ENTROPY, LIMMA_2H5AD
-    	shell:
-    	'''
-    	limma_method.R --input !{datain} --output limma.!{datasetname}.rds
-    	'''
+    	
+    	"""
+    	limma_method.R\
+		--input ${datain}\ 
+		--output limma.${datasetname}.rds
+    	"""
 }
 
 // run ComBat method
@@ -163,11 +182,11 @@ process Combat{
     	
 	output:
     	set val(datasetname), val('ComBat'), file('ComBat.*.rds') into COMBAT_ENTROPY, COMBAT_2H5AD
-    	
-	shell:
-    	'''
-    	combat_method.R --input !{datain} --output ComBat.!{datasetname}.rds
-    	'''
+    	"""
+    	combat_method.R\ 
+		--input ${datain}\
+		--output ComBat.${datasetname}.rds
+    	"""
 }
 
 // run Seurat 3 method
@@ -183,10 +202,17 @@ process Seurat_3{
 	output:
     	set val(datasetname), val('Seurat3'), file('Seurat3.*.rds') into SEURAT3_ENTROPY, SEURAT3_2H5AD
     	
-	shell:
-    	'''
-    	seurat3_method.R --input !{datain} --output Seurat3.!{datasetname}.rds
-    	'''
+	
+    	"""
+    	seurat3_method.R\
+		--input ${datain}\
+		--assay_name ${params.assay_name}\
+		--batch_key ${params.batch_key}\
+		--hvg_method ${params.Seurat_3.hvg_method}\
+		--n_features ${params.Seurat_3.n_features}\
+		--n_anchors ${params.Seurat_3.n_anchors}\
+		--output Seurat3.${datasetname}.rds
+    	"""
 }
 
 // run mnnCorrect method
@@ -203,10 +229,10 @@ process MnnCorrect{
 	output:
     	set val(datasetname), val('mnnCorrect'), file('mnnCorrect.*.rds') into MNNCORRECT_ENTROPY, MNNCORRECT_H5AD
 
-    	shell:
-    	'''
-    	mnnCorrect_method.R --input !{datain} --output mnnCorrect.!{datasetname}.rds
-    	'''
+    	
+    	"""
+    	mnnCorrect_method.R --input ${datain} --output mnnCorrect.${datasetname}.rds
+    	"""
 }
 
 // run fastMNN method
@@ -222,10 +248,10 @@ process fastMNN{
 	output:
     	set val(datasetname), val('fastMNN'), file('fastMNN.*.rds') into FASTMNN_ENTROPY, FASTMNN_2H5AD
     	
-	shell:
-    	'''
-    	fastMNN_method.R --input !{datain} --output fastMNN.!{datasetname}.rds
-    	'''
+	
+    	"""
+    	fastMNN_method.R --input ${datain} --output fastMNN.${datasetname}.rds
+    	"""
 }
 
 //Send rds objets to the rds --> h5ad converter, to compute UMAP in python (where UMAP is implemented.
@@ -245,10 +271,10 @@ process rds_to_h5ad_converter {
 	output:
     	set val(datasetname), val(method), file('*.h5ad') into R_TOOLS_UMAP 
     	
-    	shell:
-    	'''
-   	rds_h5ad_converter.R --input !{datain} --output !{method}.!{datasetname}.h5ad
-    	'''
+    	
+    	"""
+   	rds_h5ad_converter.R --input ${datain} --output ${method}.${datasetname}.h5ad
+    	"""
 }
 
 //Merge rds objects channels to compute entropy in R 
@@ -267,10 +293,10 @@ process R_entropy {
 
     	output:
     	file('*.csv')
-    	shell:
-    	'''
-    	R_entropy_after.R --input !{datain} --output entropy_!{method}.!{datasetname}.csv
-    	'''
+    	
+    	"""
+    	R_entropy_after.R --input ${datain} --output entropy_${method}.${datasetname}.csv
+    	"""
 }
 
 // compute Shannon entropy in py
@@ -285,10 +311,10 @@ process py_entropy {
     	output:
     	file('*.csv')
 
-    	shell:
-    	'''
-    	entropy_py.py --input !{datain} --output_entropy  entropy_!{method}.!{datasetname}.csv 
-    	'''
+    	
+    	"""
+    	entropy_py.py --input ${datain} --output_entropy  entropy_${method}.${datasetname}.csv 
+    	"""
 }
 
 PY_TOOLS_UMAP.mix(R_TOOLS_UMAP).set{ ALL_UMAP }
@@ -305,8 +331,8 @@ process py_UMAP {
 	output:
     	file('*.csv')
     	
-	shell:
-    	'''
-    	Py_UMAP.py --input !{datain} --output umap.!{method}.!{datasetname}.csv  
-    	'''
+	
+    	"""
+    	Py_UMAP.py --input ${datain} --output umap.${method}.${datasetname}.csv  
+    	"""
 }

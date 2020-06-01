@@ -5,7 +5,6 @@
 suppressPackageStartupMessages(library(reticulate))  
 suppressPackageStartupMessages(library(SummarizedExperiment)) 
 suppressPackageStartupMessages(library(SingleCellExperiment)) 
-
 suppressPackageStartupMessages(library(loomR))
 suppressPackageStartupMessages(library(sceasy))
 
