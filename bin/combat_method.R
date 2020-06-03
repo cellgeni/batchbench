@@ -1,9 +1,7 @@
 #!/usr/bin/env Rscript
   
-#libraries
-library(SingleCellExperiment) #object processing
-library(sva) #ComBat
-
+suppressPackageStartupMessages(require(SingleCellExperiment))
+suppressPackageStartupMessages(require(sva))
 
 args <- R.utils::commandArgs(asValues=TRUE)
 
@@ -14,18 +12,14 @@ if (is.null(args[["output"]])) {
   print("Provide a valid outpsut file name --> RDS file")
 }
 
-#input file
+# input file
 dataset <- readRDS(args[["input"]])
-
-#remove those genes with 0 variance, if not ComBat throws error!
-dataset <- dataset[rowSums(logcounts(dataset)) > 0, ]
-
-#data
+# remove those genes with 0 variance, if not ComBat throws error!
+dataset <- dataset[rowSums(logcounts(dataset)) > 0, ] # in principle already removed in QC
+# run ComBat
 mod_data <- as.data.frame(t(as.matrix(logcounts(dataset))))
 # Basic batch removal
 mod0 = model.matrix(~ 1, data = mod_data)
-#run ComBat
-t1 = Sys.time()
 
 assay(dataset, "corrected") <- ComBat(
   dat = t(mod_data),
@@ -34,16 +28,6 @@ assay(dataset, "corrected") <- ComBat(
   par.prior = TRUE,
   prior.plots = FALSE
 )
-
-t2 = Sys.time()
-print(t2-t1)
-
-#Note: an error appears when telling:Error in while (change > conv) { : missing value where TRUE/FALSE needed
-#This is fixed, removing those genes with 0 variance across cells!
-#This may be also because of -Inf values in logcounts
-
-print("ComBat worked!")
-
+# save corrected object
 saveRDS(dataset, file = args[["output"]])
-
-print("congratulations, this worked!!!")
+print("ComBat worked!")
