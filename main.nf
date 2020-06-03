@@ -38,6 +38,7 @@ process get_datasets {
 
 
 // preform QC based on min_genes expressed per cell, min_cells with expression per gene, remove batch and cell types representing less than bt_thres and ct_thres proportion of totalcells 
+if(params.QC_rds.run == "True"){
 process QC_rds{
     	publishDir "${params.output_dir}/${datasetname}" 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
@@ -60,8 +61,8 @@ process QC_rds{
 		--min_cells ${params.QC_rds.min_cells}\
 		--output QC.${datasetname}.rds
         """
+	}
 }
-
 // convert Sce objects to H5ad for the python tools
 process h5ad2sce {
     	publishDir "${params.output_dir}/${datasetname}" 
@@ -86,6 +87,7 @@ process h5ad2sce {
 }
 
 // run BBKNN method
+if(params.BBKNN.run == "True"){
 process BBKNN {
     	publishDir "${params.output_dir}/${datasetname}/Corrected_objects" 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
@@ -106,9 +108,11 @@ process BBKNN {
 		--n_neighbours ${params.BBKNN.n_neighbours}\
 		--output bbknn.${datasetname}.h5ad
         """
+	}
 }
 
 // run Scanorama method
+if(params.scanorama.run == "True"){
 process Scanorama {
     	publishDir "${params.output_dir}/${datasetname}/Corrected_objects" 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
@@ -127,12 +131,14 @@ process Scanorama {
 		--batch_key ${params.batch_key}\
 		--output scanorama.${datasetname}.h5ad
      	"""
- }
+	}
+}
 
 // merge python tool channels 
 BBKNN_ENTROPY.mix(SCANORAMA_ENTROPY).into{PY_TOOLS_ENTROPY; PY_TOOLS_UMAP}
 
 // run Harmony method
+if(params.harmony.run == "True"){
 process Harmony {
     	publishDir "${params.output_dir}/${datasetname}/Corrected_objects" 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
@@ -154,9 +160,11 @@ process Harmony {
 		--n_pcs ${params.harmony.n_pcs}\
 		--output_object harmony.${datasetname}.rds
 	"""
+	}
 }
 
 // run Limma method
+if(params.Limma.run == "True"){
 process Limma {
 	publishDir "${params.output_dir}/${datasetname}/Corrected_objects" 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
@@ -176,9 +184,11 @@ process Limma {
 		--corrected_assay ${params.corrected_assay}\
 		--output_object limma.${datasetname}.rds
     	"""
+	}
 }
 
 // run ComBat method
+if(params.Combat.run == "True"){
 process Combat{
 	publishDir "${params.output_dir}/${datasetname}/Corrected_objects" 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
@@ -198,9 +208,11 @@ process Combat{
 		--batch_key ${params.batch_key}\
 		--output_object ComBat.${datasetname}.rds
     	"""
+	}
 }
 
 // run Seurat 3 method
+if(params.Seurat_3.run == "True"){
 process Seurat_3{
  	publishDir "${params.output_dir}/${datasetname}/Corrected_objects" 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
@@ -225,9 +237,11 @@ process Seurat_3{
 		--n_anchors ${params.Seurat_3.n_anchors}\
 		--output_object Seurat3.${datasetname}.rds
     	"""
+	}
 }
 
 // run mnnCorrect method
+if(params.mnnCorrect.run == "True"){
 process mnnCorrect{
 	publishDir "${params.output_dir}/${datasetname}/Corrected_objects" 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
@@ -253,9 +267,11 @@ process mnnCorrect{
 		--cos_norm ${params.mnnCorrect.cos_norm}\
 		--output_object mnnCorrect.${datasetname}.rds
     	"""
+	}
 }
 
 // run fastMNN method
+if(params.fastMNN.run == "True"){
 process fastMNN{
  	publishDir "${params.output_dir}/${datasetname}/Corrected_objects" 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
@@ -279,6 +295,7 @@ process fastMNN{
 		--cos_norm ${params.fastMNN.cos_norm}\
 		--output_object fastMNN.${datasetname}.rds
     	"""
+	}
 }
 
 //Send rds objets to the rds --> h5ad converter, to compute UMAP in python (where UMAP is implemented.
@@ -311,6 +328,7 @@ process rds_to_h5ad_converter {
 LOGCOUNTS_ENTROPY.mix(LIMMA_ENTROPY, HARMONY_ENTROPY, COMBAT_ENTROPY, SEURAT3_ENTROPY, MNNCORRECT_ENTROPY, FASTMNN_ENTROPY).set{R_TOOLS_ENTROPY}
 
 // compute Shannon entropy in R
+if(params.R_entropy.run == "True"){
 process R_entropy {
     	publishDir "${params.output_dir}/${datasetname}/entropy" 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
@@ -336,9 +354,11 @@ process R_entropy {
 		--dim_num ${params.R_entropy.dim_num}\
 		--output_entropy entropy_${method}.${datasetname}.csv
     	"""
+	}
 }
 
 // compute Shannon entropy in py
+if(params.Py_entropy.run == "True"){
 process py_entropy {
     	publishDir "${params.output_dir}/${datasetname}/entropy" 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
@@ -359,8 +379,10 @@ process py_entropy {
 		--n_pcs ${params.Py_entropy.n_pcs}\
 		--output_entropy  entropy_${method}.${datasetname}.csv 
     	"""
+	}
 }
-
+// run SC3 clustering
+if(params.clust_SC3.run == "True"){
 process clust_SC3{
     	publishDir "${params.output_dir}/${datasetname}/clustering" 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
@@ -381,9 +403,11 @@ process clust_SC3{
 		--output_clusters sc3_clusters_${method}.${datasetname}.csv 
 	
     	"""
+	}
 }
 
-
+// run Seurat clustering
+if(params.clust_seurat.run == "True"){
 process clust_Seurat{
     	publishDir "${params.output_dir}/${datasetname}/clustering" 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
@@ -404,8 +428,11 @@ process clust_Seurat{
 		--output_clusters seurat_clusters_${method}.${datasetname}.csv 
 	
     	"""
+	}
 }
 
+// run marker genes
+if(params.find_markers.run == "True"){
 process find_markers{
     	publishDir "${params.output_dir}/${datasetname}/markers" 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
@@ -426,11 +453,14 @@ process find_markers{
 		--output_markers markers_${method}.${datasetname}.csv 
 	
     	"""
+	}
 }
 
 
 PY_TOOLS_UMAP.mix(R_TOOLS_UMAP).set{ ALL_UMAP }
 
+// run UMAP
+if(params.Py_UMAP.run == "True"){
 process py_UMAP {
     	publishDir "${params.output_dir}/${datasetname}/UMAP" , pattern: '*.csv' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
@@ -450,4 +480,5 @@ process py_UMAP {
 		--n_pcs ${params.Py_UMAP.n_pcs}\
 		--output_umap umap.${method}.${datasetname}.csv  
     	"""
+	}
 }
