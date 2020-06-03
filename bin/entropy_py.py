@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
 
-#modules
+#Compute entropy over AnnData objects
+
+import argparse
 import numpy as np
 import pandas as pd
 import scanpy as sc 
-
 import anndata
-import os
 import scipy
-import sys
-
 from math import log
-import argparse
 
 
 def shannon_entropy (x, b_vec, N_b):
@@ -46,23 +43,19 @@ def compute_entropy(df, **kwargs):
 def distribute_datasets(dataset):
     kwargs = {}
     #batch vector(batch id of each cell)
-    kwargs['batch_vector'] = dataset.obs['Batch']
+    kwargs['batch_vector'] = dataset.obs[args.batch_key]
     #modify index of batch vector so it coincides with matrix's index
     kwargs['batch_vector'].index = range(0,len(kwargs['batch_vector']))
     #number of batches
     kwargs['N_batches'] = len(dataset.obs['Batch'].astype('category').cat.categories)
 
     #cell_type vector( betch id of each cell)
-    kwargs['cell_type_vector'] = dataset.obs['cell_type1']
+    kwargs['cell_type_vector'] = dataset.obs[args.celltype_key]
     #modify index of cell_type vector so it coincides with matrix's index
     kwargs['cell_type_vector'].index = range(0,len(kwargs['cell_type_vector']))
     #number of cell_types
     kwargs['N_cell_types'] = len(dataset.obs['cell_type1'].astype('category').cat.categories)    
     
-    #save UMAP coordinates
-    #sc.pp.neighbors(dataset, n_neighbors= 15)
-    #sc.tl.umap(dataset, n_components=2)
-    #pd.DataFrame(dataset.obsm['X_umap']).to_csv(args.output_umap, header = True, index = False)
 
     try:
         knn_graph = dataset.uns['neighbors']
@@ -71,8 +64,8 @@ def distribute_datasets(dataset):
     except KeyError:
         #Both: pre corrected logcounts and Scanorama counts enter through this way.
         #compute neighbors
-        sc.tl.pca(dataset, n_comps = 50)
-        sc.pp.neighbors(dataset, n_neighbors = 30, knn = True)
+        sc.tl.pca(dataset, n_comps = args.n_pcs)
+        sc.pp.neighbors(dataset, n_neighbors = args.n_neighbors, knn = True)
                         
     #knn graph
     knn_graph = dataset.uns['neighbors']['connectivities']
@@ -88,17 +81,39 @@ def read_h5ad(dataset):
     print("File read!")
     
 
-#this is the main entry point to the compiler to go through when reading the script
+# args
 if __name__== "__main__":
 
     parser = argparse.ArgumentParser(description='Input/Output files')
 
-    parser.add_argument("--input", dest='input',
-                        help ='h5ad object over which cosine similarities are going to be calculated')
-
-    parser.add_argument('--output_entropy', dest='output_entropy',
-                        help='entropy for batch and cell type subsets stored in a CSV')
-    
+    parser.add_argument("--input_object", 
+			dest='input_object',
+			type=str,
+                        help ='Input h5ad object')
+    parser.add_argument("--batch_key", 
+			dest='batch_key',
+                        type=str,
+			default='Batch',
+			help ='Cell key defining Batch')
+    parser.add_argument("--celltype_key", 
+			dest='celltype_key', 
+			type = str,
+			default= 'cell_type1', 
+			help ='Cell key defining cell type')
+    parser.add_argument("--n_neighbours", 
+			dest='n_neighbours', 
+			type= int,
+			default = 30,
+                        help ='Number of nearest neighbours per batch to perform graph correction.')
+    parser.add_argument("--n_pcs", 
+			dest='n_pcs', 
+			type = int,
+			default= 25, 
+                        help ='Number of PCs for PCA prior to graph correction')
+    parser.add_argument('--output_entropy', 
+			dest='output_entropy',
+			type=str, 
+                        help='Csv with entropy values')
     args = parser.parse_args()
-    
-    distribute_datasets(read_h5ad(args.input))
+
+    read_h5ad(args)

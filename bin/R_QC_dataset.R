@@ -1,109 +1,110 @@
 #!/usr/bin/env Rscript
 
-#TODO: 
-# optparse arguments
-#suppressPackageStartupMessages(library("optparse"))
-#make_option(c("-h", "--help"), action="store_true", default=FALSE, 
-#               help="Show this help message and exit")
-#option_list = list(
-#    make_option(
-#        c("-i", "--input-object"),
-#        action = "store",
-#        default = NA,
-#        type = 'character',
-#        help = 'Path to rds input file' 
-#    ),
-#    make_option(
-#        c("-m", "--min-cells"),
-#        action = "store",
-#        default = 3,
-#        type = 'integer',
-#        help = 'Minimum number of cells for a gene to be expressed in.'
-#    ),
-#    make_option(
-#        c("-g", "--min-genes"),
-#        action = "store",
-#        default = 200,
-#        type = 'integer',
-#        help = 'Minimum number of genes expressed per cell for a cell to be considered.' 
-#    ),
-#    make_option(
-#        c("-b", "--bt-thres"),
-#        action = "store",
-#        default = 0.05,
-#        type = 'numeric',
-#        help = 'Minimum proportion of total cells for a batch to be considered'
-#    ),
-#    make_option(
-#        c("-c", "--ct-thres"),
-#        action = "store",
-#        default = 0.01,
-#        type = 'numeric',
-#        help = 'Minimum proportion of total cells for a cell-type to be considered'
-#    ),
-#)
-#opt <- parse_args(OptionParser(option_list=option_list))
+suppressPackageStartupMessages(library("optparse"))
 
-args <- R.utils::commandArgs(asValues=TRUE)
+option_list = list(
+    make_option(
+        c("-i", "--input_object"),
+        action = "store",
+        default = NA,
+        type = 'character',
+        help = 'Path to rds input file' 
+    ),
+    make_option(
+        c("-b", "--batch_key"),
+        action = "store",
+        default = "Batch",
+        type = 'character',
+        help = 'Batch key in cell metadata'
+    ),
+    make_option(
+        c("-c", "--celltype_key"),
+        action = "store",
+        default = "cell_type1",
+        type = 'character',
+        help = 'Cell type key in cell metadata'
+    ),
+    make_option(
+        c("-m", "--min_cells"),
+        action = "store",
+        default = 3,
+        type = 'integer',
+        help = 'Minimum number of cells for a gene to be expressed in.'
+    ),
+    make_option(
+        c("-g", "--min_genes"),
+        action = "store",
+        default = 200,
+        type = 'integer',
+        help = 'Minimum number of genes expressed per cell for a cell to be considered.' 
+    ),
+    make_option(
+        c("-a", "--bt_thres"),
+        action = "store",
+        default = 0.05,
+        type = 'numeric',
+        help = 'Minimum proportion of total cells for a batch to be considered'
+    ),
+    make_option(
+        c("-e", "--ct_thres"),
+        action = "store",
+        default = 0.01,
+        type = 'numeric',
+        help = 'Minimum proportion of total cells for a cell type to be considered'
+    ), 
+    make_option(
+        c("-o", "--output_object"),
+        action = "store",
+        default = NA,
+        type = 'character',
+        help = 'Path to rds output file'
+    )
+)
+opt <- parse_args(OptionParser(option_list=option_list))
+# read input object
+dataset <- readRDS(opt$input_object)
+# args
+batch_key <- opt$batch_key
+celltype_key <- opt$celltype_key
+min_genes <- opt$min_genes
+min_cells <- opt$min_cells
+bt_thres <- opt$bt_thres
+ct_thres <- opt$ct_thres
 
-if (is.null(args[["input"]])) {print("Provide a valid input file name --> RDS file")}
-if (is.null(args[["bt_thres"]])) {
-  print("Provide a valid bt_thres value --> float. Minimum proportion of cells required for a BATCH to be present")
-  }
-if (is.null(args[["ct_thres"]])) {
-  print("Provide a valid ct_thres value --> float. Minimum proportion of cells required for a CELL TYPE to be present")
-}
-if (is.null(args[["min_genes"]])) {
-  print("Provide a valid min_genes value --> integer. Minimum number of genes to be expressed in a cell")
-}
-if (is.null(args[["min_cells"]])) {
-  print("Provide a valid min_cells value --> integer. Minimum number of cells for a gene to be expressed in")
-}
-if (is.null(args[["output"]])) {print("Provide a valid outpsut file name --> RDS file")}
+batch_vector <- as.character(dataset[[batch_key]])
+cell_type_vector <- as.character(dataset[[celltype_key]])
 
-# inputs
-dataset <- readRDS(args[["input"]])
-bt_thres <- as.numeric(args[["bt_thres"]])
-ct_thres <- as.numeric(args[["ct_thres"]])
-min_genes <- as.integer(args[["min_genes"]])
-min_cells <- as.integer(args[["min_cells"]])
-#parameters
-batch_vector <- as.character(dataset$Batch)
-cell_type_vector <- as.character(dataset$cell_type1)
-
-#print table with batches/cell types filtering information
-print_filtering<- function(dataset, filter_vec, threshold, meta_name){
+# print table with batch and cell types filtering information
+print_filtering <- function(dataset, filter_vec, threshold, meta_name){
   
   cell_count <- table(filter_vec)[order(table(filter_vec), decreasing = T)]
-  
   print(paste("**", meta_name ,  "containing less than:",  threshold,  "of total cells are removed."))
   print(paste("** TABLE:", meta_name, "filtered based on our threshold:")) 
-  #dataframe informing about the filtering about to be done
-  exclude_df <- data.frame("X_X" = names(cell_count), 
+  # dataframe informing about the filtering about to be done
+  filtering_df <- data.frame("X_X" = names(cell_count), 
              "n_cells" = as.vector(cell_count), 
              "percent_cells" = as.vector(cell_count)/ncol(dataset), 
              "Excluded"= as.vector(cell_count)/ncol(dataset) < threshold
              )
-  names(exclude_df) <- c(meta_name, "n_cells", "percent_cells", "Excluded")
-  print(exclude_df)
+  colnames(filtering_df)[1] <- meta_name
+  print(filtering_df)
   
-  removal_names <- exclude_df[meta_name][exclude_df["Excluded"] == T]
+  removal_names <- filtering_df[meta_name][filtering_df["Excluded"] == T]
   return(removal_names)
 }
+
+# QC pre processing funciton to remove: cells annotated as NA in batch or cell type, genes expressed in less than min_cells,and cells with less than min_genes expressed.
 pre_processing <- function(dataset, min_genes, min_cells){
-  #QC pre processing funciton to remove: cells annotated as NA in batch or cell type, 
-	#genes expressed in less than min_cells,and cells with less than min_genes expressed.
-	n_NAs_b <- length(is.na(as.character(dataset$Batch))[is.na(as.character(dataset$Batch)) == T])
- 	dataset <- dataset[,!is.na(as.character(dataset$Batch))]
-	print(paste0("Cells annotated as NA for dataset$Batch = ", n_NAs_b, ". Removed"))
+	n_NAs_b <- length(is.na(as.character(dataset[[batch_key]]))[is.na(as.character(dataset[[batch_key]])) == T])
+ 	dataset <- dataset[,!is.na(as.character(dataset[[batch_key]]))]
+	print(paste0("Cells annotated as NA for dataset$Bacth = ", n_NAs_b, ". Removed"))
 	
-	n_NAs_ct <- length(is.na(as.character(dataset$cell_type1))[is.na(as.character(dataset$cell_type1)) == T])
- 	dataset <- dataset[,!is.na(as.character(dataset$cell_type1))]
+	n_NAs_ct <- length(is.na(as.character(dataset[[celltype_key]]))[is.na(as.character(dataset[[celltype_key]])) == T])
+ 	dataset <- dataset[,!is.na(as.character(dataset[[celltype_key]]))]
 	print(paste0("Cells annotated as NA for dataset$cell_type1 = ", n_NAs_ct, ". Removed"))
 	
   	dataset <- dataset[apply(logcounts(dataset), 1, function(x) sum(x > 0) >= min_cells),] 
         dataset <- dataset[, apply(logcounts(dataset), 2, function(x) sum(x > 0) >= min_genes)]
- 	#Note: we split the apply by axis to find equivalency with the Py_QC.py script  
   
   	print(paste("** CELLS with less than", min_genes, "genes expressed filtered out."))
   	print(paste("** GENES expressed in less than", min_cells, "cells filtered out."))
@@ -112,15 +113,15 @@ pre_processing <- function(dataset, min_genes, min_cells){
   	print(dim(dataset))
   	return(dataset)
 }
-#remove those batch / cell types present less than X_threshold times
+# remove those batch / cell types present less than X_threshold times
 remove_elements <- function (dataset, filter_vec, threshold, meta_name){
   removal_names <- print_filtering(dataset, filter_vec, threshold, meta_name)
   
     for(i in 1:length(removal_names)){
       if(length(removal_names) == 0){next()}
       else{
-        dataset <- dataset[, dataset$Batch != removal_names[[i]]]
-        dataset <- dataset[, dataset$cell_type1 != removal_names[[i]]]
+        dataset <- dataset[, dataset[[batch_key]] != removal_names[[i]]]
+        dataset <- dataset[, dataset[[celltype_key]] != removal_names[[i]]]
       }
     }
   
@@ -129,12 +130,13 @@ remove_elements <- function (dataset, filter_vec, threshold, meta_name){
 
 print("** Dimensions pre-filtering:")
 print(dim(dataset))
-#apply functions!
+
+# apply filtering functions!
 dataset <- pre_processing(dataset, min_genes = min_genes, min_cells = min_cells)
-dataset <- remove_elements(dataset, filter_vec = as.character(dataset$Batch), threshold = bt_thres, meta_name = "Batch/es")
-dataset <- remove_elements(dataset, filter_vec = as.character(dataset$cell_type1), threshold = ct_thres, meta_name = "Cell type/s")
+dataset <- remove_elements(dataset, filter_vec = dataset[[batch_key]], threshold = bt_thres, meta_name = "Batch/es")
+dataset <- remove_elements(dataset, filter_vec = dataset[[celltype_key]], threshold = ct_thres, meta_name = "Cell type/s")
 print("** Dimensions post-filtering:")
 print(dim(dataset))
 
-#save output
-saveRDS(dataset, args[["output"]])
+# save output
+saveRDS(dataset, opt$output_object) 

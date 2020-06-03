@@ -1,27 +1,62 @@
 #!/usr/bin/env Rscript
   
+suppressPackageStartupMessages(library("optparse"))
+
+option_list = list(
+    make_option(
+        c("-i", "--input_object"),
+        action = "store",
+        default = NA,
+        type = 'character',
+        help = 'Path to rds input file' 
+    ),
+    make_option(
+        c("-a", "--assay_name"),
+        action = "store",
+        default = "logcounts",
+        type = 'character',
+        help = 'Counts assay to add to the h5ad object'
+    ),
+    make_option(
+        c("-c", "--corrected_assay"),
+        action = "store",
+        default = "corrected",
+        type = 'character',
+        help = 'Corrected counts assay name'
+    ),
+    make_option(
+        c("-b", "--batch_key"),
+        action = "store",
+        default = "Batch",
+        type = 'character',
+        help = 'Minimum number of cells for a gene to be expressed in.'
+    ),
+    make_option(
+        c("-o", "--output_object"),
+        action = "store",
+        default = NA,
+        type = 'character',
+        help = 'Path to h5ad output file'
+    )
+)
+
+opt <- parse_args(OptionParser(option_list=option_list))
+
 suppressPackageStartupMessages(require(SingleCellExperiment))
 suppressPackageStartupMessages(require(sva))
 
-args <- R.utils::commandArgs(asValues=TRUE)
-
-if (is.null(args[["input"]])) {
-  print("Provide a valid input file name --> RDS file")
-}
-if (is.null(args[["output"]])) {
-  print("Provide a valid outpsut file name --> RDS file")
-}
-
+#args 
+assay_name <- opt$assay_name
+corrected_assay <- opt$corrected_assay 
+batch_key <- opt$batch_key
 # input file
-dataset <- readRDS(args[["input"]])
-# remove those genes with 0 variance, if not ComBat throws error!
-dataset <- dataset[rowSums(logcounts(dataset)) > 0, ] # in principle already removed in QC
+dataset <- readRDS(opt$input_object)
+batch_vector <- as.character(dataset[[batch_key]])
 # run ComBat
-mod_data <- as.data.frame(t(as.matrix(logcounts(dataset))))
-# Basic batch removal
+mod_data <- as.data.frame(t(as.matrix(assay(dataset,assay_name))))
 mod0 = model.matrix(~ 1, data = mod_data)
 
-assay(dataset, "corrected") <- ComBat(
+assay(dataset, corrected_assay) <- ComBat(
   dat = t(mod_data),
   batch = as.character(dataset$Batch),
   mod = mod0,
@@ -29,5 +64,5 @@ assay(dataset, "corrected") <- ComBat(
   prior.plots = FALSE
 )
 # save corrected object
-saveRDS(dataset, file = args[["output"]])
+saveRDS(dataset, file = opt$output_object) 
 print("ComBat worked!")
