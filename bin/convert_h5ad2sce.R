@@ -1,5 +1,27 @@
 #!/usr/bin/env Rscript
 
+# Convert SCE to H5ad class object
+#suppressPackageStartupMessages(library("optparse"))
+#
+#option_list = list(
+#    make_option(
+#        c("-i", "--input_object"),
+#        action = "store",
+#        default = NA,
+#        type = 'character',
+#        help = 'Path to rds input file' 
+#    ),
+#    make_option(
+#        c("-b", "--batch_key"),
+#        action = "store",
+#        default = "Batch",
+#        type = 'character',
+#        help = 'Minimum number of cells for a gene to be expressed in.'
+#    ),
+#    make_option(
+#        c("-c", "--celltype_key"),
+#        action = "store",
+#
 #Convert h5ad objects to SCE.
 
 #TODO

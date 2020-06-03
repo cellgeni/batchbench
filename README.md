@@ -15,7 +15,7 @@ BatchBench is a Nextflow workflow for running the following scRNA-Seq data batch
 The pieline is run through the bash script `RESUME_Batchbench`. Here the profiles, data directory and output directory are specified. Nextflow can generate an execution report, a timeline and a flowchart which output directory is specified here. 
 Additionally, the `-resume` command line option allows for the continuation of a workflow execution
 ```
-source=/home/ubuntu/BatchBench.nf
+source=/home/ubuntu/main.nf
 
 $HOME/bin/nextflow run $source \
         -profile docker,local\
@@ -31,7 +31,7 @@ $HOME/bin/nextflow run $source \
 
 Equivalently, the pipeline can be run from the command line as:
 ```
-nextflow run BatchBench.nf -profile docker,local --datadir /home/ubuntu/BatchBench/data --metadata /home/ubuntu/BatchBench/data/dataset_list.txt --outdir /home/ubuntu/BatchBench/results -resume
+nextflow run main.nf -profile docker,local --datadir /home/ubuntu/BatchBench/data --metadata /home/ubuntu/BatchBench/data/dataset_list.txt --outdir /home/ubuntu/BatchBench/results -resume
 ```
 ## Input
 As a input to the workflow equivalent __SingleCellExperiment rds__ object and __AnnData h5ad__ object should be present in the data directory, and the data set name should be specified in the `metadata.txt` file. 
