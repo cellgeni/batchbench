@@ -1,33 +1,34 @@
 #!/usr/bin/env Rscript
   
-#libraries
-library(scater) #object processing
-library(harmony) #Harmony
+suppressPackageStartupMessages(require(scater))
+suppressPackageStartupMessages(require(harmony))
 
 args <- R.utils::commandArgs(asValues=TRUE)
 
 if (is.null(args[["input"]])) {
   print("Provide a valid input file name --> RDS file")
   }
+if (is.null(args[["assay_name"]])) {
+  print("Assay to use")
+  }
+if (is.null(args[["n_pcs"]])) {
+  print("Number of PCs for embedding")
+  }
 if (is.null(args[["output"]])) {
   print("Provide a valid outpsut file name --> RDS file")
     }
 
-#INPUT!
+# input
 dataset <- readRDS(args[["input"]])
-
-#run PCA
-dataset <- runPCA(dataset, exprs_values = "logcounts", ncomponents = 25)
+# run PCA
+dataset <- runPCA(dataset, exprs_values = args[["assay_name"]], ncomponents = args[["n_pcs"]])
 pca <- dataset@reducedDims@listData[["PCA"]]
-#cell batch label vector
+# cell batch label vector
 batch_vector <-  as.character(dataset$Batch)
-
-#run Harmony
+# run Harmony
 dataset@reducedDims@listData[['corrected_embedding']] <- HarmonyMatrix(pca, batch_vector, theta=4, do_pca = F)
-#Harmony outputs empty rownames for corrected_embedding. Add rownames
+# Add rownames to corrected embedding 
 rownames(dataset@reducedDims@listData[['corrected_embedding']]) <- colnames(dataset)
-
-print("congratulations, HARMONY worked!!!")
-
-#OUTPUT!
+# save object with corrected embedding
 saveRDS(dataset, args[["output"]])
+print("congratulations, HARMONY worked!")

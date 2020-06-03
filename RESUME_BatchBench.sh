@@ -5,15 +5,17 @@ set -euo pipefail
 unset http_proxy
 unset https_proxy
 
-source=/home/ubuntu/BatchBench.nf
-
-$HOME/bin/nextflow run $source \
+source_dir="/home/ubuntu/BatchBench/runbb/git_batchbench"
+data_dir="${source_dir}/test_data"
+output_dir="${source_dir}/results"
+report_dir="${output_dir}/reports"
+$HOME/bin/nextflow run "${source_dir}/main.nf"\
         -profile docker,local\
-        --datadir /home/ubuntu/BatchBench/data\
-        --metadata /home/ubuntu/BatchBench/data/dataset_list.txt \
-        --outdir /home/ubuntu/BatchBench/results\
-        -with-report /home/ubuntu/BatchBench/reports/report.html\
-        -with-trace /home/ubuntu/BatchBench/reports/trace.txt\
-        -with-timeline /home/ubuntu/BatchBench/reports/timeline.html\
-        -with-dag  /home/ubuntu/BatchBench/reports/flowchart.png\
-        -resume
+        --datadir ${data_dir}\
+        --metadata "${data_dir}/dataset_list.txt"\
+        --outdir ${output_dir}\
+        -with-report "${report_dir}/report.html"\
+        -with-trace "${report_dir}/trace.txt"\
+        -with-timeline "${report_dir}/timeline.html"\
+        -with-dag "${report_dir}/flowchart.png"\
+        #-resume

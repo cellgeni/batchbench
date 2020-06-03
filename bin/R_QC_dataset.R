@@ -1,5 +1,49 @@
 #!/usr/bin/env Rscript
 
+#TODO: 
+# optparse arguments
+#suppressPackageStartupMessages(library("optparse"))
+#make_option(c("-h", "--help"), action="store_true", default=FALSE, 
+#               help="Show this help message and exit")
+#option_list = list(
+#    make_option(
+#        c("-i", "--input-object"),
+#        action = "store",
+#        default = NA,
+#        type = 'character',
+#        help = 'Path to rds input file' 
+#    ),
+#    make_option(
+#        c("-m", "--min-cells"),
+#        action = "store",
+#        default = 3,
+#        type = 'integer',
+#        help = 'Minimum number of cells for a gene to be expressed in.'
+#    ),
+#    make_option(
+#        c("-g", "--min-genes"),
+#        action = "store",
+#        default = 200,
+#        type = 'integer',
+#        help = 'Minimum number of genes expressed per cell for a cell to be considered.' 
+#    ),
+#    make_option(
+#        c("-b", "--bt-thres"),
+#        action = "store",
+#        default = 0.05,
+#        type = 'numeric',
+#        help = 'Minimum proportion of total cells for a batch to be considered'
+#    ),
+#    make_option(
+#        c("-c", "--ct-thres"),
+#        action = "store",
+#        default = 0.01,
+#        type = 'numeric',
+#        help = 'Minimum proportion of total cells for a cell-type to be considered'
+#    ),
+#)
+#opt <- parse_args(OptionParser(option_list=option_list))
+
 args <- R.utils::commandArgs(asValues=TRUE)
 
 if (is.null(args[["input"]])) {print("Provide a valid input file name --> RDS file")}
@@ -17,7 +61,7 @@ if (is.null(args[["min_cells"]])) {
 }
 if (is.null(args[["output"]])) {print("Provide a valid outpsut file name --> RDS file")}
 
-#inputs
+# inputs
 dataset <- readRDS(args[["input"]])
 bt_thres <- as.numeric(args[["bt_thres"]])
 ct_thres <- as.numeric(args[["ct_thres"]])
