@@ -368,7 +368,7 @@ process clust_SC3{
     	tag "entropy (python) $datain $method $datasetname"
 
     	input:
-    	set val(datasetname), val(method), file(datain) from PY_TOOLS_ENTROPY
+    	set val(datasetname), val(method), file(datain) from CLUST_SC3
     	output:
     	file('*.csv')
 
@@ -391,7 +391,7 @@ process clust_Seurat{
     	tag "entropy (python) $datain $method $datasetname"
 
     	input:
-    	set val(datasetname), val(method), file(datain) from PY_TOOLS_ENTROPY
+    	set val(datasetname), val(method), file(datain) from CLUST_SEURAT
     	output:
     	file('*.csv')
 
