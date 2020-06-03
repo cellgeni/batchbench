@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+#Compute UMAP dimensionality reduction over AnnData objects
+
 import numpy as np
 import pandas as pd
 import scanpy as sc
@@ -10,8 +13,8 @@ def save_umap(umap_df, out_name):
 def umap_counts_mat(dataset):
     """Compute UMAP over the expression matrix of batch corrected objects, 
     This includes: mnnCorrect, limma, ComBat, Seurat_v3 and Scanorama methods."""
-    sc.tl.pca(dataset, n_comps= 20)
-    sc.pp.neighbors(dataset, n_neighbors=30, use_rep = 'X_pca')
+    sc.tl.pca(dataset, n_comps=args.n_pcs)
+    sc.pp.neighbors(dataset, n_neighbors=args.n_neighbours, use_rep = 'X_pca')
     sc.tl.umap(dataset, n_components=2)
     umap_df = pd.DataFrame(dataset.obsm["X_umap"], columns = ["UMAP_1", "UMAP_2"])
     return umap_df
@@ -19,7 +22,7 @@ def umap_counts_mat(dataset):
 def umap_embedding(dataset):
     """Compute UMAP over the corrected embedding of batch corrected objects,
     This includes: fastMNN and Harmony methods."""
-    sc.pp.neighbors(dataset, n_neighbors=30, use_rep = 'X_corrected_embedding')
+    sc.pp.neighbors(dataset, n_neighbors=args.n_neighbours, use_rep = 'X_corrected_embedding')
     sc.tl.umap(dataset, n_components=2)
     umap_df = pd.DataFrame(dataset.obsm["X_umap"], columns = ["UMAP_1", "UMAP_2"])
     return umap_df
@@ -31,51 +34,55 @@ def umap_bbknn(dataset):
     umap_df = pd.DataFrame(dataset.obsm["X_umap"], columns = ["UMAP_1", "UMAP_2"])
     return umap_df
 
-#def umap_bbknnn_before(dataset):
-#    """compute umap coordinates over uncorrected counts of object"""
-#    sc.pp.neighbors(dataset, n_neighbors=30)
-#    sc.tl.umap(dataset, n_components=2)
-#    umap_df = pd.DataFrame(dataset.obsm["X_umap"])
-#    return umap_df
-
 def distribute_datasets(dataset):
     try:
         neighbors = dataset.uns['neighbors']
         print('BBKNN corrected object!')
-        save_umap(umap_bbknn(dataset), out_name = args.output)
+        save_umap(umap_bbknn(dataset), out_name = args.output_umap)
 
     except KeyError:
         
         try: 
             dataset.obsm['X_corrected_embedding']
             print('PCA space batch corrected object!')
-            save_umap(umap_embedding(dataset), out_name = args.output)
+            save_umap(umap_embedding(dataset), out_name = args.output_umap)
 
         except KeyError:
             print('Counts matrix batch corrected object!')
-            save_umap(umap_counts_mat(dataset), out_name = args.output)
+            save_umap(umap_counts_mat(dataset), out_name = args.output_umap)
 
-#def save_corrected_h5ad(dataset):
-#	dataset.write(args.output_h5ad)
 
 def read_h5ad(args):
-	dataset = sc.read(args.input)
+	dataset = sc.read(args.input_object)
 	distribute_datasets(dataset)
-#	save_corrected_h5ad(dataset)
-
+# args
 if __name__== "__main__":
 
     parser = argparse.ArgumentParser(description='Input/Output files')
 
-    parser.add_argument("--input", dest='input',
-                        help ='Batch corrected object --> .h5ad file')
-
-    parser.add_argument('--output', dest='output',
-                        help='UMAP coordinates of a batch corrected object --> .csv file')
-    
- #   parser.add_argument('--output_h5ad', dest='output_h5ad',
-  #                      help='h5ad batch corrected object, saved for additional analysis --> .h5ad file')
-    
+    parser.add_argument("--input_object", 
+			dest='input_object',
+			type=str,
+                        help ='Input h5ad object')
+    parser.add_argument("--n_neighbours", 
+			dest='n_neighbours', 
+			type= int,
+			default = 30,
+                        help ='Number of nearest neighbours per batch to perform graph correction.')
+    parser.add_argument("--n_pcs", 
+			dest='n_pcs', 
+			type = int,
+			default= 25, 
+                        help ='Number of PCs for PCA prior to graph correction')
+    parser.add_argument("--dim_umap", 
+			dest='dim_umap', 
+			type = int,
+			default= 2, 
+                        help ='Number of UMAP components to output')
+    parser.add_argument('--output_umap', 
+			dest='output_umap',
+			type=str, 
+                        help='Csv with UMAP coordinate values')
     args = parser.parse_args()
 
     read_h5ad(args)

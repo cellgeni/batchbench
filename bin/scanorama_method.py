@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 
+# run Scanorama method 
+
 import argparse
-import numpy as np
-import pandas as pd
 import scanpy as sc
+import pandas as pd
+import numpy as np
+import scipy
 import scanorama
 import anndata
-import scipy
-
 
 def save_h5ad(dataset):
-	dataset.write(args.output)
+	dataset.write(args.output_object)
 	print("Scanorama done!")
 # Scanorama
 def correct_scanorama(dataset_list, cell_metadata):
@@ -48,11 +49,19 @@ if __name__== "__main__":
 
     parser = argparse.ArgumentParser(description='Input/Output files')
 
-    parser.add_argument("--input", dest='input',
-                        help ='h5ad object over which Scanorama is going to be ran')
-    parser.add_argument("--batch_key", dest='batch_key',
-                        help ='Cell key defining Batch')
-    parser.add_argument('--output', dest='output',
-                        help='Scanorama corrected object.Scanorama corrects the expression matrix')
-    args = parser.parse_args()	
-    read_h5ad(args.input)
+    parser.add_argument("--input_object", 
+			dest='input_object',
+			type=str,
+                        help ='Input h5ad object')
+    parser.add_argument("--batch_key", 
+			dest='batch_key',
+                        type=str,
+			default='Batch',
+			help ='Cell key defining Batch')
+    parser.add_argument('--output_object', 
+			dest='output_object',
+			type=str, 
+                        help='AnnData object with corrected graph in object.uns["neighbours"].') 
+    args = parser.parse_args()
+
+    read_h5ad(args.input_object)
