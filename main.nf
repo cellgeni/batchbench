@@ -77,11 +77,11 @@ process h5ad2sce {
  	set val(datasetname), file("*.h5ad") into BBKNN_METHOD, SCANORAMA_METHOD
 	
 	"""
-        #export NUMBA_CACHE_DIR=/lustre/scratch117/cellgen/cellgeni/ruben/batchbench/NUMBA_CACHE
 	export NUMBA_CACHE_DIR=~/NUMBA_CACHE
 	convert_sce2h5ad.R\
 		 --input ${datain}\
 		 --assay_name ${params.assay_name}\
+		 --corrected_assay ${params.corrected_assay}\
 		 --output QC.${datasetname}.h5ad
 	""" 	
 }
@@ -305,15 +305,15 @@ process conv_h5ad2sce {
 	tag "convert $datasetname sce2h5ad"
 	
 	input:
-        set val(datasetname), file(datain) from BBKNN_2SCE  
-        set val(datasetname), file(datain) from SCANORAMA_2SCE 
+        set val(datasetname), val(method), val(space_corrected), file(datain) from BBKNN_2SCE  
+        set val(datasetname), val(method), val(space_corrected), file(datain) from SCANORAMA_2SCE 
 	
 	output:
- 	set val(datasetname), file("bbknn.*.h5ad") into BBKNN_ENTROPY
- 	set val(datasetname), file("scanorama.*.h5ad") into SCANORAMA_ENTROPY, SCANORAMA_CLUST_SC3 
+ 	set val(datasetname), val(method), val(space_corrected), file("bbknn.*.h5ad") into BBKNN_ENTROPY
+ 	set val(datasetname), val(method), val(space_corrected), file("scanorama.*.h5ad") into SCANORAMA_ENTROPY, SCANORAMA_CLUST_SC3 
 	
 	"""
-	convert_sce2h5ad.R\
+	 convert_sce2h5ad.R\
 		 --input ${datain}\
 		 --assay_name ${params.assay_name}\
 		 --output QC.${datasetname}.h5ad
@@ -324,13 +324,13 @@ process conv_h5ad2sce {
 process conv_seurat2sce {
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 2.GB + 10.GB * (task.attempt - 1) }
-	tag "convert $datasetname sce2h5ad"
+	tag "convert $datasetname seurat2sce"
 	
 	input:
-        set val(datasetname), file(datain) from SEURAT3_2SCE 
+        set val(datasetname), val(method), val(space_corrected), file(datain) from SEURAT3_2SCE 
 	
 	output:
- 	set val(datasetname), file("*.h5ad") into SEURAT_ENTROPY, SEURAT_CLUST_SC3, SEURAT_UMAP 
+ 	set val(datasetname), val(method), val(space_corrected), file("*.rds") into SEURAT_ENTROPY, SEURAT_CLUST_SC3, SEURAT_UMAP 
 	
 	"""
 	convert_seurat2sce.R\
@@ -341,12 +341,11 @@ process conv_seurat2sce {
 	}
 
 
-
 // Conv_3. Convert H5AD object to SEURAT
 process h5ad2seurat{
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
-     	tag "h5ad2sce $datasetname"
+     	tag "h5ad2seurat $datasetname"
      	
 	input:
      	set val(datasetname), val(method), val(space_corrected), file(datain) from SCANORAMA_2SEURAT
@@ -358,7 +357,8 @@ process h5ad2seurat{
 	"""
 	convert_h5ad2seurat.R\
 		--input ${datain}\
-	 	--output
+		--corrected_assay ${params.corrected_assay}\
+	 	--output ${datain} # if problems consider changing to ${method}.${datasetname}.rds and remove internal gsub
 	""" 
 	}
 
@@ -381,7 +381,9 @@ process sce2seurat{
 	"""
 	convert_sce2seurat.R\
 		--input ${datain}\
-	 	--output
+		--assay_name ${params.assay_name}\
+		--corrected_assay ${params.corrected_assay}\
+	 	--output ${datain}
 	""" 
 	}
 
@@ -401,7 +403,7 @@ process entropy {
 	tag "convert $datasetname sce2h5ad"
 	
 	input:
-        set val(datasetname), file(datain) from ENTROPY 
+        set val(datasetname), val(method), val(space_corrected), file(datain) from ENTROPY 
 	
 	output:
  	file("*.csv") 
@@ -416,7 +418,7 @@ process entropy {
 		--celltype_key ${params.celltype_key}\
 		--k_num ${params.entropy.k_num}\
 		--dim_num ${params.entropy.dim_num}\
-		--output_entropy entropy_${method}.${datasetname}.csv
+		--output_entropy entropy.${method}.${datasetname}.csv
 	""" 	
 	}
 }

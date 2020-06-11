@@ -13,11 +13,11 @@ option_list = list(
         help = 'Path to rds input file' 
     ),
     make_option(
-        c("-a", "--assay_name"),
+        c("-c", "--corrected_assay"),
         action = "store",
-        default = "logcounts",
+        default = "corrected",
         type = 'character',
-        help = 'Counts assay to add to the h5ad object'
+        help = 'Corrected counts assay name'
     ),
     make_option(
         c("-o", "--output_object"),
@@ -37,5 +37,5 @@ suppressPackageStartupMessages(library(sceasy))
 # read input object
 sce <- readRDS(opt$input_object)
 # convert sce2h5ad and save
-sceasy:::sce2anndata(obj = sce, outFile = opt$output_object, main_layer = opt$assay_name, transfer_layers = NULL)
+sceasy:::sce2anndata(obj = sce, outFile = opt$output_object, main_layer = opt$corrected_assay, transfer_layers = NULL)
 print("SCE successfully converted to H5ad object.")

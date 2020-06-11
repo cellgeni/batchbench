@@ -1,42 +1,37 @@
 #!/usr/bin/env Rscript
+suppressPackageStartupMessages(library("optparse"))
 
-# Convert SCE to H5ad class object
-#suppressPackageStartupMessages(library("optparse"))
-#
-#option_list = list(
-#    make_option(
-#        c("-i", "--input_object"),
-#        action = "store",
-#        default = NA,
-#        type = 'character',
-#        help = 'Path to rds input file' 
-#    ),
-#    make_option(
-#        c("-b", "--batch_key"),
-#        action = "store",
-#        default = "Batch",
-#        type = 'character',
-#        help = 'Minimum number of cells for a gene to be expressed in.'
-#    ),
-#    make_option(
-#        c("-c", "--celltype_key"),
-#        action = "store",
-#
-#Convert h5ad objects to SCE.
+option_list = list(
+    make_option(
+        c("-i", "--input_object"),
+        action = "store",
+        default = NA,
+        type = 'character',
+        help = 'Path to rds Seurat object' 
+    ),
+    make_option(
+        c("-c", "--corrected_assay"),
+        action = "store",
+        default = "corrected",
+        type = 'character',
+        help = 'Corrected counts assay name'
+    ),
+    make_option(
+        c("-o", "--output_object"),
+        action = "store",
+        default = NA,
+        type = 'character',
+        help = 'Path to the rds SCE object'
+    )
+)
+opt <- parse_args(OptionParser(option_list=option_list))
 
-#TODO
-##Fix assayname assignment via assay_name argument!
-##NOTE: Currently assay saved as 'corrected'.
+# args
+corrected_assay <- opt$corrected_assay
 
 suppressPackageStartupMessages(require(reticulate))
 suppressPackageStartupMessages(require(SingleCellExperiment))
 suppressPackageStartupMessages(require(Seurat))
-
-args <- R.utils::commandArgs(asValues=TRUE)
-
-if (is.null(args[["input"]])) {stop("Provide valid path to input SCE object.")}
-#if (is.null(args[["assay_name"]])) {stop("Provide an assay name for to store h5ad counts in the SCE object.")}
-if (is.null(args[["output"]])) {stop("Provide valid path to output Seurat object.")}
 
 #function to manually convert h5ad to Seurat 
 h5ad2sce <- function(h5ad_path){
@@ -66,16 +61,16 @@ h5ad2sce <- function(h5ad_path){
 
 
 #function to build sce
-build_sce <- function(counts_mat, meta_data, assay_name, emb_list){
-  sce <- SingleCellExperiment(assays = list(corrected = counts_mat),
+build_sce <- function(counts_mat, meta_data, corrected_assay, emb_list){
+  sce <- SingleCellExperiment(assays = list(corrected_assay = counts_mat),
                             colData = meta_data,
                             rowData = list('feature_names' = rownames(counts_mat)),
                             reducedDims = emb_list)
   sce
 }
 
-sce <- h5ad2sce(h5ad_path = args[["input"]])
+sce <- h5ad2sce(h5ad_path = opt$input_object)
 
 #save converted object
-saveRDS(sce, file = args[["output"]])
+saveRDS(sce, file = opt$output_object)
 print("h5ad successfully converted to SCE object!")
