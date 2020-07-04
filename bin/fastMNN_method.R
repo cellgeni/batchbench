@@ -77,16 +77,11 @@ batch_vector <- as.character(dataset[[opt$batch_key]])
 # run fastMNN
 correction <- fastMNN(dataset, assay.type=assay_name, batch = factor(batch_vector), k = 30, d = 25,  cos.norm = TRUE) 
 # attach the batch corrected low_d embedding to reducedDims of the SCE object
-#print("A")
-#print(correction@reducedDims@listData[["corrected"]])
-#print(dataset)
-#print(corrected_emb)
-#dataset@reducedDims[["corrected_emb"]] <- correction@reducedDims[["corrected"]]
-#print("B")
-## add colnames to embedding
-#colnames(dataset@reducedDims@listData[[corrected_emb]]) <- paste0("PC_", c(1:ncol(dataset@reducedDims@listData[[corrected_emb]])))
-## order cells of embedding as in expression matrix 
-#dataset@reducedDims@listData[[corrected_emb]] <- dataset@reducedDims@listData[[corrected_emb]][colnames(assay(dataset, assay_name)), ]
-## save corrected object 
+dataset@reducedDims@listData[["corrected_emb"]] <- correction@reducedDims@listData[["corrected"]]
+# add colnames to embedding
+colnames(dataset@reducedDims@listData[[corrected_emb]]) <- paste0("PC_", c(1:ncol(dataset@reducedDims@listData[[corrected_emb]])))
+# order cells of embedding as in expression matrix 
+dataset@reducedDims@listData[[corrected_emb]] <- dataset@reducedDims@listData[[corrected_emb]][colnames(assay(dataset, assay_name)), ]
+# save corrected object 
 saveRDS(correction, file = opt$output_object)
 print("congratulations, fastMNN worked!")

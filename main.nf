@@ -297,7 +297,7 @@ process fastMNN{
 
 
 
-// Conv_1. Convert SCE objects to H5AD for the Python tools
+// Conv_1. Convert H5AD objects to SCE 
 process conv_h5ad2sce {
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 2.GB + 10.GB * (task.attempt - 1) }
@@ -308,16 +308,19 @@ process conv_h5ad2sce {
         set val(datasetname), val(method), val(space_corrected), file(datain) from SCANORAMA_2SCE 
 	
 	output:
- 	set val(datasetname), val(method), val(space_corrected), file("bbknn.*.h5ad") into BBKNN_ENTROPY
- 	set val(datasetname), val(method), val(space_corrected), file("scanorama.*.h5ad") into SCANORAMA_ENTROPY, SCANORAMA_CLUST_SC3 
+ 	set val(datasetname), val(method), val(space_corrected), file("*.rds") into PY_METHODS_ENTROPY, PY_METHODS_CLUST_SC3 
 	
 	"""
 	convert_h5ad2sce.R\
 		 --input ${datain}\
-		 --assay_name ${params.assay_name}\
-		 --output QC.${datasetname}.h5ad
+		 --corrected_assay ${params.corrected_assay}\
+		 --method ${method}\
+		 --output ${method}.${datasetname}.rds
 	""" 	
 	}
+
+// Only Scanorama method can be clustered by SC3
+SCANORAMA_CLUST_SC3  = PY_METHODS_CLUST_SC3.filter{ it[2] == "scanorama" }
 
 // Conv_2. Convert SEURAT object to SCE
 process conv_seurat2sce {
@@ -329,13 +332,13 @@ process conv_seurat2sce {
         set val(datasetname), val(method), val(space_corrected), file(datain) from SEURAT3_2SCE 
 	
 	output:
- 	set val(datasetname), val(method), val(space_corrected), file("*.rds") into SEURAT_ENTROPY, SEURAT_CLUST_SC3, SEURAT_UMAP 
+ 	set val(datasetname), val(method), val(space_corrected), file("*.rds") into SEURAT_ENTROPY, SEURAT_CLUST_SC3, SEURAT_UMAP
 	
 	"""
 	convert_seurat2sce.R\
 		 --input ${datain}\
-		 --assay_name ${params.assay_name}\
-		 --output QC.${datasetname}.h5ad
+		 --corrected_assay ${params.corrected_assay}\
+		 --output ${method}.${datasetname}.rds
 	""" 	
 	}
 
@@ -351,15 +354,19 @@ process conv_h5ad2seurat{
      	set val(datasetname), val(method), val(space_corrected), file(datain) from BBKNN_2SEURAT
      	
 	output:
-     	set val(datasetname), val(method), val(space_corrected), file('scanorama.*.rds') into SCANORAMA_CLUST_SEURAT, SCANORAMA_MARKERS 
-     	set val(datasetname), val(method), val(space_corrected), file('bbknn.*.rds') into BBKNN_SEURAT 
+     	set val(datasetname), val(method), val(space_corrected), file("*.rds") into PY_METHODS_CLUST_SEURAT, PY_METHODS_MARKERS 
 	"""
 	convert_h5ad2seurat.R\
 		--input ${datain}\
 		--corrected_assay ${params.corrected_assay}\
-	 	--output ${datain} # if problems consider changing to ${method}.${datasetname}.rds and remove internal gsub
+		--method ${method}\
+	 	--output ${datain} 
 	""" 
 	}
+
+
+// Only Scanorama method can be used to compute marker genes 
+SCANORAMA_MARKERS  = PY_METHODS_MARKERS.filter{ it[2] == "scanorama" }
 
 //Merge SCE object channels to convert to Seurat
 LOGCOUNTS_2SEURAT.mix(HARMONY_2SEURAT, LIMMA_2SEURAT, COMBAT_2SEURAT, MNNCORRECT_2SEURAT, FASTMNN_2SEURAT).set{CONV_SCE2SEURAT}
@@ -374,9 +381,7 @@ process conv_sce2seurat{
 	set val(datasetname), val(method), val(space_corrected), file(datain) from CONV_SCE2SEURAT 
      	
 	output:
-     	set val(datasetname), val(method), val(space_corrected), file('*.rds') into SCE_CLUST_SEURAT, SCE_MARKERS
-     	set val(datasetname), val(method), val(space_corrected), file('harmony.*.rds') into HARMONY_CLUST_SEURAT
-     	set val(datasetname), val(method), val(space_corrected), file('fastMNN.*.rds') into FASTMNN_CLUST_SEURAT
+     	set val(datasetname), val(method), val(space_corrected), file("*.rds") into SCE_CLUST_SEURAT, SCE_MARKERS
 	"""
 	convert_sce2seurat.R\
 		--input ${datain}\
@@ -387,10 +392,11 @@ process conv_sce2seurat{
 	""" 
 	}
 
+// filter out Harmony and fastMNN (low-D embedding) from MARKERS Channel
+SCE_MARKERS_FILT  = SCE_MARKERS.filter{ it[2] != "harmony" || it[2] != "fastMNN" }
 
- 
 // Merge input channels for entropy
-LOGCOUNTS_ENTROPY.mix(HARMONY_ENTROPY, LIMMA_ENTROPY, COMBAT_ENTROPY, MNNCORRECT_ENTROPY, FASTMNN_ENTROPY, BBKNN_ENTROPY, SCANORAMA_ENTROPY,  SEURAT_ENTROPY).set{ENTROPY}
+LOGCOUNTS_ENTROPY.mix(HARMONY_ENTROPY, LIMMA_ENTROPY, COMBAT_ENTROPY, MNNCORRECT_ENTROPY, FASTMNN_ENTROPY, PY_METHODS_ENTROPY,  SEURAT_ENTROPY).set{ENTROPY}
 
 // compute Shannon entropy in R
 if(params.entropy.run == "True"){
@@ -454,7 +460,7 @@ process clust_SC3{
 
 
 //Merge all Seurat clustering input channels
-SEURAT3_CLUST_SEURAT.mix(SCANORAMA_CLUST_SEURAT, BBKNN_SEURAT, SCE_CLUST_SEURAT).set{ CLUST_SEURAT }
+SEURAT3_CLUST_SEURAT.mix(PY_METHODS_CLUST_SEURAT, SCE_CLUST_SEURAT).set{ CLUST_SEURAT }
 
 // run Seurat clustering
 if(params.clust_seurat.run == "True"){
@@ -482,7 +488,7 @@ process clust_Seurat{
 }
 
 // Merge all Seurat FindMarkers input channel 
-SEURAT3_MARKERS.mix(SCANORAMA_MARKERS, SCE_MARKERS).set{ MARKERS }
+SEURAT3_MARKERS.mix(SCANORAMA_MARKERS, SCE_MARKERS_FILT).set{ MARKERS }
 
 // run marker genes
 if(params.find_markers.run == "True"){

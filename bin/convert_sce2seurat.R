@@ -55,9 +55,7 @@ method <- opt$method
 # read input object
 sce <- readRDS(opt$input_object)
 # convert sce to seurat
-if(method == "logcounts"){ sce2seurat <- as.Seurat(sce, assay = assay_name, data = assay_name, counts = assay_name)
-}else{
-sce2seurat <- as.Seurat(sce, assay = corrected_assay, data = corrected_assay, counts = corrected_assay }
+if(method == "logcounts"){ sce2seurat <- as.Seurat(sce, assay = assay_name, data = assay_name, counts = assay_name) }else{ sce2seurat <- as.Seurat(sce, assay = corrected_assay, data = corrected_assay, counts = corrected_assay)} 
 # save object
 saveRDS(sce2seurat, file = opt$output_object)
 print("SCE successfully converted to Seurat object!")
