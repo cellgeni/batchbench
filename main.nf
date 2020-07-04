@@ -53,13 +53,13 @@ process QC_rds{
         set val(datasetname), val('logcounts'), val('exp_matrix'), file("QC.*.rds") into LOGCOUNTS_ENTROPY, LOGCOUNTS_UMAP, LOGCOUNTS_CLUST_SC3, LOGCOUNTS_2SEURAT, LOGCOUNTS_MARKERS
 	
         """
-        R_QC_dataset.R\
-		--input ${datain}\
+        QC_data.R\
+		--input_object ${datain}\
 		--bt_thres ${params.QC_rds.batch_thres}\
 		--ct_thres ${params.QC_rds.celltype_thres}\
 		--min_genes ${params.QC_rds.min_genes}\
 		--min_cells ${params.QC_rds.min_cells}\
-		--output QC.${datasetname}.rds
+		--output_object QC.${datasetname}.rds
         """
 	}
 }
@@ -81,7 +81,6 @@ process h5ad2sce {
 	convert_sce2h5ad.R\
 		 --input ${datain}\
 		 --assay_name ${params.assay_name}\
-		 --corrected_assay ${params.corrected_assay}\
 		 --output QC.${datasetname}.h5ad
 	""" 	
 }
@@ -313,7 +312,7 @@ process conv_h5ad2sce {
  	set val(datasetname), val(method), val(space_corrected), file("scanorama.*.h5ad") into SCANORAMA_ENTROPY, SCANORAMA_CLUST_SC3 
 	
 	"""
-	 convert_sce2h5ad.R\
+	convert_h5ad2sce.R\
 		 --input ${datain}\
 		 --assay_name ${params.assay_name}\
 		 --output QC.${datasetname}.h5ad
@@ -342,7 +341,7 @@ process conv_seurat2sce {
 
 
 // Conv_3. Convert H5AD object to SEURAT
-process h5ad2seurat{
+process conv_h5ad2seurat{
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
      	tag "h5ad2seurat $datasetname"
@@ -366,7 +365,7 @@ process h5ad2seurat{
 LOGCOUNTS_2SEURAT.mix(HARMONY_2SEURAT, LIMMA_2SEURAT, COMBAT_2SEURAT, MNNCORRECT_2SEURAT, FASTMNN_2SEURAT).set{CONV_SCE2SEURAT}
 
 //Conv_4. Convert SCE to Seurat 
-process sce2seurat{
+process conv_sce2seurat{
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
      	tag "h5ad2sce $datasetname"
@@ -383,7 +382,8 @@ process sce2seurat{
 		--input ${datain}\
 		--assay_name ${params.assay_name}\
 		--corrected_assay ${params.corrected_assay}\
-	 	--output ${datain}
+		--method ${method}\
+		--output ${datain}
 	""" 
 	}
 

@@ -13,11 +13,11 @@ option_list = list(
         help = 'Path to rds input file' 
     ),
     make_option(
-        c("-c", "--corrected_assay"),
+        c("-a", "--assay_name"),
         action = "store",
-        default = "corrected",
+        default = "logcounts",
         type = 'character',
-        help = 'Corrected counts assay name'
+        help = 'Counts assay to add to the h5ad object'
     ),
     make_option(
         c("-o", "--output_object"),
@@ -29,13 +29,14 @@ option_list = list(
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 
-#suppressPackageStartupMessages(library(reticulate))  
 suppressPackageStartupMessages(library(SingleCellExperiment)) 
 suppressPackageStartupMessages(library(loomR))
 suppressPackageStartupMessages(library(sceasy))
 
+# args
+assay_name <- opt$assay_name
 # read input object
 sce <- readRDS(opt$input_object)
 # convert sce2h5ad and save
-sceasy:::sce2anndata(obj = sce, outFile = opt$output_object, main_layer = opt$corrected_assay, transfer_layers = NULL)
+sceasy:::sce2anndata(obj = sce, outFile = opt$output_object, main_layer = assay_name, transfer_layers = NULL)
 print("SCE successfully converted to H5ad object.")

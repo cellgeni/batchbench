@@ -1,5 +1,7 @@
 #!/usr/bin/env Rscript
-
+ 
+#TODO
+# Currently converting SCE to Seurat in this script, this has to pass through the converter
 suppressPackageStartupMessages(library("optparse"))
 
 option_list = list(
@@ -18,7 +20,7 @@ option_list = list(
         help = 'Minimum number of cells for a gene to be expressed in.'
     ),
     make_option(
-        c("-h", "--hvg_method"),
+        c("-m", "--hvg_method"),
         action = "store",
         default = "dispersion",
         type = 'character',
@@ -27,14 +29,14 @@ option_list = list(
     make_option(
         c("-f", "--n_features"),
         action = "store",
-        default = "2000",
+        default = 2000,
         type = 'integer',
         help = 'N of variable features to find in FindVariableFeatures' 
     ),
     make_option(
-        c("-r", "--anchors"),
+        c("-r", "--n_anchors"),
         action = "store",
-        default = "30",
+        default = 30,
         type = 'integer',
         help = ' Number of anchors to find to perform integration'
     ),
@@ -82,7 +84,6 @@ option_list = list(
     )
 )
 
-print("I")
 opt <- parse_args(OptionParser(option_list=option_list))
 
 suppressPackageStartupMessages(require(Seurat))
@@ -95,15 +96,15 @@ n_features <- opt$n_features
 n_anchors <- opt$n_anchors
 
 # input dataset
-dataset <- readRDS(opt$input_object)
+sce <- readRDS(opt$input_object)
 # convert to seurat object
-dataset <- as.Seurat(dataset, counts = assay_name, data = assay_name)
+dataset <- as.Seurat(sce, assay = assay_name, data = assay_name, counts = assay_name)
 batch_vector <- as.character(dataset[[batch_key]])
 batch_names  <- names(table(batch_vector))
 N_batches <- length(batch_names)
 
 # split seurat object into batches
-batch_list <- lapply(1:N_batches, function(x) {abc <- dataset[, dataset[[batch_key]] == batch_names[x]]})
+batch_list <- SplitObject(dataset, split.by = batch_key)
 # Normalize and find HVG
 for (i in 1:N_batches) {
   batch_list[[i]] <- NormalizeData(object = batch_list[[i]], 
@@ -124,3 +125,4 @@ anchors <- FindIntegrationAnchors(object.list = batch_list, dims = 1:n_anchors, 
 integrated <- IntegrateData( new.assay.name = corrected_assay, anchorset = anchors, dims = 1:n_anchors)
 # save seurat3 corrected object
 saveRDS(integrated, opt$output_object)
+print("Seurat 3 worked")
