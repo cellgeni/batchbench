@@ -12,7 +12,7 @@ BatchBench is a Nextflow workflow for running the following scRNA-Seq data batch
 
 ## Run BatchBench
 
-The pieline is run through the bash script `RESUME_Batchbench`. Here the profiles, data directory and output directory are specified. Nextflow can generate an execution report, a timeline and a flowchart which output directory is specified here. 
+The pipeline is run through the bash script `RESUME_Batchbench`. Here the profiles, data directory and output directory are specified. Nextflow can generate an execution report, a timeline and a flowchart which output directory is specified here. 
 Additionally, the `-resume` command line option allows for the continuation of a workflow execution
 ```
 source=/home/ubuntu/main.nf
@@ -76,7 +76,7 @@ This is a mild quality control step where:
 - Batches representing less than `bt_thres` per cent of the total number of cells are removed. 
 - Cell types representing less than `ct_thres` per cent of the total number of cells are removed.
 
-The purpose of `bt_thres` and `ct_thres` is avoiding very small batche or cell populations affecting the downstream entropy calculation. 
+The purpose of `bt_thres` and `ct_thres` is avoiding very small batchs or cell populations affecting the downstream entropy calculation. 
 
 ### 2. Batch correction
 Each of the batch corrected object is saved as specified in the `publisDir` parameter. This way one can check how the different methods correct the input data. 
@@ -88,7 +88,7 @@ We calculate:
 - __batch entropy__: to evaluate the degree of alignment of the batches after the correction. 
 - __cell type entropy__: to examine if different cell populations are being mixed. 
     
-An ideal batch correction should output a high batch entropy , and low cell type entropy. Indicating alignment of batches while maintaining different cell types separate. 
+An ideal batch correction should output a high batch entropy, and low cell type entropy. Indicating alignment of batches while maintaining different cell types separate. 
  
 Each of the batch corrected objects both entropies are computed, stored in a CSV file and saved as specified in the `publisDir` parameter. 
 
@@ -96,7 +96,7 @@ Each of the batch corrected objects both entropies are computed, stored in a CSV
 
 We may want to visualize the batch correction performed by each of the methods this is why __UMAP__ (Uniform Manifold Approximation and Projection) coordinates are computed. 
 
-To ensure reproducibility in the coordinates calculation, all corrected objects are converted to h5ad and then UMAP is computed thorugh scanpy function `sc.tl.umap`.
+To ensure reproducibility in the coordinates calculation, all corrected objects are converted to h5ad and then UMAP is computed through scanpy function `sc.tl.umap`.
 
 As output, a CSV file with the 2 first UMAP components is saved as specified in the `publisDir` parameter. 
 
