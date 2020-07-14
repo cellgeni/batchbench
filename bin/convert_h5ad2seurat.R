@@ -76,7 +76,7 @@ extract_var_names <- function(h5ad_file){
 
 # function to extract BBKNN graph
 extract_bbknn_graph <- function(h5ad_file){
-  graph_conn <- as(reticulate::py_to_r(h5ad_file$uns$neighbors$connectivities)$toarray(), "dgCMatrix")
+  graph_conn <- as(reticulate::py_to_r(h5ad_file[["obsp"]][["connectivities"]]$toarray()), "dgCMatrix")
   cell_names <- extract_obs_names(h5ad_file)
   dimnames(graph_conn) <- list(cell_names, cell_names)
   graph_conn
@@ -130,7 +130,6 @@ if(method %in% c("scanorama", "Scanorama")){
   gene_names <- extract_var_names(h5ad_file)
   # build SeuratObject
   seurat_obj <- build_seurat(counts_mat = counts_mat, corrected_assay = corrected_assay, meta_data = meta_data, emb_list = emb_list, add_graph = NULL)
-  print("Scanorama h5ad object succesfully converted to Seurat Object")
   }
 
 # BBKNN h5ad object conversion
@@ -147,8 +146,8 @@ if(method %in% c("bbknn", "BBKNN")){
   cell_names <- extract_var_names(h5ad_file)
   # build SeuratObject
   seurat_obj <- build_seurat(counts_mat = counts_mat, corrected_assay = corrected_assay, meta_data = meta_data, emb_list = emb_list, add_graph = graph_conn)
-  print("BBKNN h5ad object succesfully converted to Seurat Object")
 }
 
 # save converted object
 saveRDS(seurat_obj, opt$output_object)
+print(paste0(method, " h5ad object succesfully converted to Seurat Object"))

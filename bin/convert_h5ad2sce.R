@@ -121,7 +121,6 @@ if(method %in% c("scanorama", "Scanorama")){
   gene_names <- extract_var_names(h5ad_file)
   # build SCE
   sce <- build_sce(counts_mat = counts_mat, meta_data = meta_data, gene_names = gene_names, emb_list = emb_list)
-  print("Scanorama h5ad object succesfully converted to SCE")
 }
 
 # BBKNN h5ad object conversion
@@ -136,8 +135,8 @@ if(method %in% c("bbknn", "BBKNN")){
   cell_names <- extract_var_names(h5ad_file)
   # build SCE
   sce <- build_sce(counts_mat = graph_conn, meta_data = meta_data, gene_names = NULL, emb_list = emb_list)
-  print("BBKNN h5ad object succesfully converted to SCE")
 }
 
 # save converted object
 saveRDS(sce, opt$output_object)
+print(paste0(method, " h5ad object succesfully converted to SCE"))

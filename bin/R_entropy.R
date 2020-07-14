@@ -1,162 +1,176 @@
 #!/usr/bin/env Rscript
 
-# Calculate Shannon entropy over an .rds object, AFTER batch correction. 
+# Calculate Shannon entropy over an .rds object 
 # Entropy is calculated depending on the corrected space that enters the script.
 
 suppressPackageStartupMessages(library("optparse"))
 
 option_list = list(
-    make_option(
-        c("-i", "--input_object"),
-        action = "store",
-        default = NA,
-        type = 'character',
-        help = 'Path to rds input file' 
-    ),
-    make_option(
-        c("-a", "--assay_name"),
-        action = "store",
-        default = "logcounts",
-        type = 'character',
-        help = 'Counts assay to add to the h5ad object'
-    ),
-    make_option(
-        c("-c", "--corrected_assay"),
-        action = "store",
-        default = "corrected",
-        type = 'character',
-        help = 'Corrected counts assay name'
-    ),
-    make_option(
-        c("-e", "--corrected_emb"),
-        action = "store",
-        default = "corrected_emb",
-        type = 'character',
-        help = 'Name of the fastMNN corrected low-dimensional embedding.'
-    ),
-    make_option(
-        c("-b", "--batch_key"),
-        action = "store",
-        default = "Batch",
-        type = 'character',
-        help = 'Batch key in cell metadata'
-    ),
-    make_option(
-        c("-c", "--celltype_key"),
-        action = "store",
-        default = "cell_type1",
-        type = 'character',
-        help = 'Cell type key in cell metadata'
-    ),
-    make_option(
-        c("-k", "--k_num"),
-        action = "store",
-        default = "30",
-        type = 'integer',
-        help = 'number of nearest neighbors to consider during graph construction.' 
-    ),
-    make_option(
-        c("-d", "--dim_num"),
-        action = "store",
-        default = "50",
-        type = 'integer',
-        help = ' number of dimensions to use for the search' 
-    ),
-    make_option(
-        c("-o", "--output_entropy"),
-        action = "store",
-        default = NA,
-        type = 'character',
-        help = 'Path to csv output file'
-    )
+  make_option(
+    c("-i", "--input_object"),
+    action = "store",
+    default = NA,
+    type = 'character',
+    help = 'Path to rds input file'
+  ),
+  make_option(
+    c("-a", "--assay_name"),
+    action = "store",
+    default = "logcounts",
+    type = 'character',
+    help = 'Counts assay to add to the h5ad object'
+  ),
+  make_option(
+    c("-c", "--corrected_assay"),
+    action = "store",
+    default = "corrected",
+    type = 'character',
+    help = 'Corrected counts assay name'
+  ),
+  make_option(
+    c("-m", "--method"),
+    action = "store",
+    default = NA,
+    type = 'character',
+    help = 'Bacth correction method the input comes from'
+  ),
+  make_option(
+    c("-e", "--corrected_emb"),
+    action = "store",
+    default = "corrected_emb",
+    type = 'character',
+    help = 'Name of the fastMNN corrected low-dimensional embedding.'
+  ),
+  make_option(
+    c("-b", "--batch_key"),
+    action = "store",
+    default = "Batch",
+    type = 'character',
+    help = 'Batch key in cell metadata'
+  ),
+  make_option(
+    c("-t", "--celltype_key"),
+    action = "store",
+    default = "cell_type1",
+    type = 'character',
+    help = 'Cell type key in cell metadata'
+  ),
+  make_option(
+    c("-k", "--k_num"),
+    action = "store",
+    default = "30",
+    type = 'integer',
+    help = 'number of nearest neighbors to consider during graph construction.'
+  ),
+  make_option(
+    c("-d", "--dim_num"),
+    action = "store",
+    default = "50",
+    type = 'integer',
+    help = ' number of dimensions to use for the search'
+  ),
+  make_option(
+    c("-o", "--output_entropy"),
+    action = "store",
+    default = NA,
+    type = 'character',
+    help = 'Path to csv output file'
+  )
 )
 
 opt <- parse_args(OptionParser(option_list=option_list))
 
-suppressPackageStartupMessages(require(scran))
-
-#args <-R.utils::commandArgs(asValues=TRUE)
-#if (is.null(args[["input"]])) {
-#  print("Provide a valid input file name (Batch corrected object) --> RDS file")
-#}
-#if (is.null(args[["output"]])) {
-#  print("Provide a valid output file name (Per batch and cell type entropy) --> CSV file")
-#}
-#if (is.null(args[["output_matrix"]])) {
-#  print("Provide a valid output file name for the matrix. RDS file")
-#}
-
-# args
-assay_name <- opt$assay_name
-batch_key <- opt$batch_key
-celltype_key <- opt$celltype_key
-k_num = opt$k_num
-dim_num = opt$dim_num
-corrected_assay <- opt$corrected_assay
-corrected_emb <- opt$corrected_emb
-#input file
-object <- readRDS(opt$input_object)
-
+## FUNCTIONS ##
 # entropy function
 shannon_entropy <- function(x, batch_vector, N_batches) {
-  freq_batch = table(batch_vector[x ==1])/length(batch_vector[x == 1])
+  freq_batch = table(batch_vector[x >=1])/length(batch_vector[x >= 1])
   freq_batch_positive = freq_batch[freq_batch > 0]
   return(-sum(freq_batch_positive * log(freq_batch_positive))/log(N_batches))
 }
 
-compute_entropy <- function(corrected_space, K_num, dim_num, bool, x, batch_vector, N_batches, cell_type_vector, N_cell_types){
+# build KNN graph 
+build_knn_graph <- function(corrected_space, K_num, dim_num, bool){
   knn_graph <- as.matrix(buildKNNGraph(corrected_space, k=k_num, d=dim_num, transposed = bool)[])
+  knn_graph
+}
+
+# compute shannon entropy per cell
+compute_entropy <- function(knn_graph, batch_vector, N_batches, cell_type_vector, N_cell_types){
   batch_entropy <- apply(knn_graph, 1, function(x) {shannon_entropy (x, batch_vector, N_batches)})
   celltype_entropy <- apply(knn_graph, 1, function(x) {shannon_entropy (x, cell_type_vector, N_cell_types)})
   entropy <- cbind(batch_entropy,celltype_entropy)
   names(entropy) <- c("Batch_entropy", "Cell_type_entropy")
-  return(entropy)
+  entropy
+}
+# save entropy values per cell
+save_results <- function(entropy, row_names){
+  write.csv(entropy, file = opt$output_entropy, row.names = row_names)
 }
 
-save_results <- function(x, col_names){
-  write.csv(x, file = args[["output"]], sep = "", row.names = FALSE, col.names = col_names)
+##  EXECUTE  ##
+
+# args
+assay_name <- opt$assay_name
+corrected_assay <- opt$corrected_assay
+corrected_emb <- opt$corrected_emb
+method <- opt$method
+if(is.null(method) || is.na(method)){ stop("Please provide the batch correction method the input file comes from") }
+batch_key <- opt$batch_key
+celltype_key <- opt$celltype_key
+k_num = opt$k_num
+dim_num = opt$dim_num
+
+# input file
+dataset <- readRDS(opt$input_object)
+
+batch_vector <- as.character(dataset$batch_key)
+N_batches <- length(unique(batch_vector))
+cell_type_vector <- as.character(dataset[[celltype_key]])
+N_cell_types <- length(unique(cell_type_vector))
+
+# load scran package to compute KNN graph
+suppressPackageStartupMessages(require(scran))
+
+# for graph correcting methods (BBKNN)
+if (method %in% c("bbknn", "BBKNN")){
+  corrected_graph <- assay(dataset, corrected_assay) # graph stored in assay in SCE for BBKNN
+  entropy <- compute_entropy(knn_graph = corrected_graph, batch_vector, N_batches, cell_type_vector, N_cell_types)
+  save_results(entropy, row_names = rownames(corrected_graph))
 }
 
-# 1) SCE objects 
-if (class(object) == "SingleCellExperiment"){
-  print("The input object is a Single Cell Experiment class object")
-  
-  #Calculate entropy
-  batch_vector <- as.character(object[[batch_key]])
-  N_batches <- length(unique(batch_vector))
-  cell_type_vector <- colData(object)[[celltype_key]]
-  N_cell_types <- length(unique(cell_type_vector))
-  
-  # COMPUTE ENTROPY 
-  # 1.1) tools that correct low_D embeddings
-  if (corrected_emb %in% reducedDimNames(object)){
-    corrected_space <- as.matrix(object@reducedDims@listData[[corrected_emb]])
-    col_names <- c("PCA_batch_entropy", "PCA_cell_type_entropy")
-    save_results(compute_entropy(corrected_space, k_num = k_num, dim_num = dim_num, bool = TRUE, x, batch_vector, N_batches, cell_type_vector, N_cell_types), col_names) 
-    print("Entropy calculated in PCA space!")
-    }
-  
-  # 1.2) methods that correct expression matrix
-  if ("corrected" %in% names(assays(object))){
-    corrected_space <- assay(object, "corrected")
-    col_names <- c("Batch_entropy", "Cell_type_entropy")
-    save_results(compute_entropy(corrected_space, k_num = k_num, dim_num = dim_num, bool = FALSE, x, batch_vector, N_batches, cell_type_vector, N_cell_types), col_names) 
-    print("Entropy calculated over counts matrix!")
+# for embedding correcting methods (fastMNN, harmony)
+if (method %in% c("fastMNN", "FastMNN", "Harmony", "harmony")){
+  corr_embedding <- dataset@reducedDims@listData[[corrected_emb]]
+  print(corr_embedding)
+  knn_graph <- build_knn_graph(corrected_space = corr_embedding, K_num = k_num, dim_num = dim_num, bool = TRUE)
+  entropy <- compute_entropy(knn_graph = knn_graph, batch_vector, N_batches, cell_type_vector, N_cell_types)
+  save_results(entropy, row_names = rownames(corr_embedding))
+}
+
+# for counts matrix correcting methods except Seurat (logcounts, mnnCorrect, limma, ComBat, Scanorama)
+if (method %in% c("logcounts", "Logcounts", "mnnCorrect", "mnncorrect", "limma", "Limma", "ComBat", "combat", "Scanorama", "scanorama")){
+  if(method %in% c("logcounts", "Logcounts")){
+    counts_mat <- assay(dataset, assay_name)
+  }else{counts_mat <- assay(dataset, corrected_assay)
   }
+  knn_graph <- build_knn_graph(corrected_space = counts_mat, K_num = k_num, dim_num = dim_num, bool = FALSE)
+  entropy <- compute_entropy(knn_graph = knn_graph, batch_vector, N_batches, cell_type_vector, N_cell_types)
+  save_results(entropy, row_names = colnames(counts_mat))
 }
 
-#2) Seurat objects
-if (class(object) == "Seurat"){
+# for Seurat object
+if (method %in% c("Seurat3", "seurat3", "Seurat")){
   suppressPackageStartupMessages(require(Seurat))
-  print("The input object is a Seurat class object")
   
-  batch_vector <- object@meta.data[[batch_key]]
+  batch_vector <- dataset@meta.data[[batch_key]]
   N_batches <- length(unique(batch_vector))
-  cell_type_vector <- object@meta.data[[celltype_key]]
+  cell_type_vector <- dataset@meta.data[[celltype_key]]
   N_cell_types <- length(unique(cell_type_vector))
-
-    space <- as.matrix(object@assays[[corrected_assay]]@data)
-    col_names <- c("Batch_entropy", "Cell_type_entropy")
-    save_results(compute_entropy(corrected_space = space, bool = FALSE, x, batch_vector, N_batches, cell_type_vector, N_cell_types), col_names) 
-    print("Entropy calculated over Seurat object!")
+  
+  counts_mat <- dataset@assays[[corrected_assay]]@data
+  knn_graph <- build_knn_graph(corrected_space = counts_mat, K_num = k_num, dim_num = dim_num, bool = FALSE)
+  entropy <- compute_entropy(knn_graph = knn_graph, batch_vector, N_batches, cell_type_vector, N_cell_types)
+  save_results(entropy, row_names = colnames(counts_mat))
 }
+
+print(paste0("Congrats! Entropy computed for method: ", method))

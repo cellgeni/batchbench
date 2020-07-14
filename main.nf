@@ -25,7 +25,6 @@ process get_datasets {
 		
     	shell:
     	'''
-    	#pyfile="!{params.datadir}/!{datasetname}.h5ad" #input file can be provided in rds format only
     	Rfile="!{params.data_dir}/!{datasetname}.rds"
     	if [[ ! -e $Rfile ]]; then
     	  echo "Please check existence of $Rfile"
@@ -108,6 +107,10 @@ process BBKNN {
 		--output bbknn.${datasetname}.h5ad
         """
 	}
+} else {
+	BBKNN_2SEURAT = Channel.empty()
+	BBKNN_2SCE = Channel.empty()
+	BBKNN_UMAP = Channel.empty()
 }
 
 // run Scanorama method
@@ -131,8 +134,13 @@ process Scanorama {
 		--output scanorama.${datasetname}.h5ad
      	"""
 	}
+} else {
+	SCANORAMA_2SCE = Channel.empty()
+	SCANORAMA_2SEURAT = Channel.empty()
+	SCANORAMA_UMAP = Channel.empty()
 }
 
+PY_TOOLS_2SEURAT = BBKNN_2SEURAT.mix(SCANORAMA_2SEURAT)
 
 // run Harmony method
 if(params.harmony.run == "True"){
@@ -158,6 +166,11 @@ process Harmony {
 		--output_object harmony.${datasetname}.rds
 	"""
 	}
+} else {
+	HARMONY_ENTROPY = Channel.empty()
+	HARMONY_UMAP = Channel.empty()
+	HARMONY_2SEURAT = Channel.empty()
+	HARMONY_2H5AD = Channel.empty()
 }
 
 // run Limma method
@@ -182,6 +195,12 @@ process Limma {
 		--output_object limma.${datasetname}.rds
     	"""
 	}
+} else {
+	LIMMA_ENTROPY = Channel.empty()
+	LIMMA_UMAP = Channel.empty()
+	LIMMA_CLUST_SC3 = Channel.empty()
+	LIMMA_2H5AD = Channel.empty()
+	LIMMA_2SEURAT = Channel.empty()
 }
 
 // run ComBat method
@@ -206,6 +225,12 @@ process Combat{
 		--output_object ComBat.${datasetname}.rds
     	"""
 	}
+} else {
+	COMBAT_ENTROPY = Channel.empty()
+	COMBAT_UMAP = Channel.empty()
+	COMBAT_CLUST_SC3 = Channel.empty()
+	COMBAT_2H5AD = Channel.empty()
+	COMBAT_2SEURAT = Channel.empty()
 }
 
 // run Seurat 3 method
@@ -220,7 +245,7 @@ process Seurat_3{
     	set val(datasetname), file(datain) from SEURAT3_METHOD
     	
 	output:
-    	set val(datasetname), val('Seurat3'), val('exp_matrix'), file('Seurat3.*.rds') into SEURAT3_2H5AD, SEURAT3_2SCE, SEURAT3_CLUST_SEURAT, SEURAT3_MARKERS 
+    	set val(datasetname), val('Seurat3'), val('exp_matrix'), file('Seurat3.*.rds') into SEURAT_ENTROPY, SEURAT3_2H5AD, SEURAT3_2SCE, SEURAT3_CLUST_SEURAT, SEURAT3_MARKERS 
     	
 	
     	"""
@@ -235,6 +260,12 @@ process Seurat_3{
 		--output_object Seurat3.${datasetname}.rds
     	"""
 	}
+} else {
+	SEURAT_ENTROPY = Channel.empty()
+	SEURAT3_2H5AD = Channel.empty()
+	SEURAT_2SCE = Channel.empty()
+	SEURAT3_CLUST_SEURAT = Channel.empty()
+	SEURAT3_MARKERS = Channel.empty()
 }
 
 // run mnnCorrect method
@@ -265,6 +296,12 @@ process mnnCorrect{
 		--output_object mnnCorrect.${datasetname}.rds
     	"""
 	}
+} else {
+	MNNCORRECT_ENTROPY = Channel.empty()
+	MNNCORRECT_UMAP = Channel.empty()
+	MNNCORRECT_2H5AD = Channel.empty()
+	MNNCORRECT_2SEURAT = Channel.empty()
+	MNNCORRECT_CLUST_SC3 = Channel.empty()
 }
 
 // run fastMNN method
@@ -293,9 +330,12 @@ process fastMNN{
 		--output_object fastMNN.${datasetname}.rds
     	"""
 	}
+} else {
+	FASTMNN_ENTROPY = Channel.empty()
+	FASTMNN_UMAP = Channel.empty()
+	FASTMNN_2H5AD = Channel.empty()
+	FASTMNN_2SEURAT = Channel.empty()
 }
-
-
 
 // Conv_1. Convert H5AD objects to SCE 
 process conv_h5ad2sce {
@@ -308,14 +348,14 @@ process conv_h5ad2sce {
         set val(datasetname), val(method), val(space_corrected), file(datain) from SCANORAMA_2SCE 
 	
 	output:
- 	set val(datasetname), val(method), val(space_corrected), file("*.rds") into PY_METHODS_ENTROPY, PY_METHODS_CLUST_SC3 
+ 	set val(datasetname), val(method), val(space_corrected), file('*.rds') into PY_METHODS_ENTROPY, PY_METHODS_CLUST_SC3 
 	
 	"""
 	convert_h5ad2sce.R\
 		 --input ${datain}\
 		 --corrected_assay ${params.corrected_assay}\
 		 --method ${method}\
-		 --output ${method}.${datasetname}.rds
+		 --output_object ${method}.${datasetname}.rds
 	""" 	
 	}
 
@@ -332,13 +372,13 @@ process conv_seurat2sce {
         set val(datasetname), val(method), val(space_corrected), file(datain) from SEURAT3_2SCE 
 	
 	output:
- 	set val(datasetname), val(method), val(space_corrected), file("*.rds") into SEURAT_ENTROPY, SEURAT_CLUST_SC3, SEURAT_UMAP
+ 	set val(datasetname), val(method), val(space_corrected), file('*.rds') into  SEURAT_CLUST_SC3, SEURAT_UMAP
 	
 	"""
 	convert_seurat2sce.R\
 		 --input ${datain}\
 		 --corrected_assay ${params.corrected_assay}\
-		 --output ${method}.${datasetname}.rds
+		 --output_object sce_obj.${method}.${datasetname}.rds
 	""" 	
 	}
 
@@ -350,17 +390,16 @@ process conv_h5ad2seurat{
      	tag "h5ad2seurat $datasetname"
      	
 	input:
-     	set val(datasetname), val(method), val(space_corrected), file(datain) from SCANORAMA_2SEURAT
-     	set val(datasetname), val(method), val(space_corrected), file(datain) from BBKNN_2SEURAT
+     	set val(datasetname), val(method), val(space_corrected), file(datain) from PY_TOOLS_2SEURAT 
      	
 	output:
-     	set val(datasetname), val(method), val(space_corrected), file("*.rds") into PY_METHODS_CLUST_SEURAT, PY_METHODS_MARKERS 
+     	set val(datasetname), val(method), val(space_corrected), file('*.rds') into PY_METHODS_CLUST_SEURAT, PY_METHODS_MARKERS 
 	"""
 	convert_h5ad2seurat.R\
 		--input ${datain}\
 		--corrected_assay ${params.corrected_assay}\
 		--method ${method}\
-	 	--output ${datain} 
+		--output_object seurat_obj.${method}.${datasetname}.rds
 	""" 
 	}
 
@@ -381,14 +420,14 @@ process conv_sce2seurat{
 	set val(datasetname), val(method), val(space_corrected), file(datain) from CONV_SCE2SEURAT 
      	
 	output:
-     	set val(datasetname), val(method), val(space_corrected), file("*.rds") into SCE_CLUST_SEURAT, SCE_MARKERS
+     	set val(datasetname), val(method), val(space_corrected), file('*.rds') into SCE_CLUST_SEURAT, SCE_MARKERS
 	"""
 	convert_sce2seurat.R\
 		--input ${datain}\
 		--assay_name ${params.assay_name}\
 		--corrected_assay ${params.corrected_assay}\
 		--method ${method}\
-		--output ${datain}
+		--output_object seurat_obj.${method}.${datasetname}.rds
 	""" 
 	}
 
@@ -398,15 +437,14 @@ SCE_MARKERS_FILT  = SCE_MARKERS.filter{ it[2] != "harmony" || it[2] != "fastMNN"
 // Merge input channels for entropy
 LOGCOUNTS_ENTROPY.mix(HARMONY_ENTROPY, LIMMA_ENTROPY, COMBAT_ENTROPY, MNNCORRECT_ENTROPY, FASTMNN_ENTROPY, PY_METHODS_ENTROPY,  SEURAT_ENTROPY).set{ENTROPY}
 
-// compute Shannon entropy in R
+// compute entropy 
 if(params.entropy.run == "True"){
-
 
 // calculate Shannon entropy 
 process entropy {
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 2.GB + 10.GB * (task.attempt - 1) }
-	tag "convert $datasetname sce2h5ad"
+	tag "convert $datain sce2h5ad"
 	
 	input:
         set val(datasetname), val(method), val(space_corrected), file(datain) from ENTROPY 
@@ -420,6 +458,7 @@ process entropy {
 		--assay_name ${params.assay_name}\
 		--corrected_assay ${params.corrected_assay}\
 		--corrected_emb ${params.corrected_emb}\
+		--method ${method}\
 		--batch_key ${params.batch_key}\
 		--celltype_key ${params.celltype_key}\
 		--k_num ${params.entropy.k_num}\
@@ -451,8 +490,11 @@ process clust_SC3{
 		--input_object ${datain}\
 		--assay_name ${params.assay_name}\
 		--corrected_assay ${params.corrected_assay}\
+		--method ${method}\
 		--celltype_key ${params.celltype_key}\
-		--output_clusters sc3_clusters_${method}.${datasetname}.csv 
+		--biology ${biology}\
+		--output_clusters SC3_clusters_${method}.${datasetname}.csv\
+		--output_rowdata SC3_features_${method}.${datasetname}.csv 
 	
     	"""
 	}
@@ -480,8 +522,10 @@ process clust_Seurat{
 		--input_object ${datain}\
 		--assay_name ${params.assay_name}\
 		--corrected_assay ${params.corrected_assay}\
+		--corrected_emb ${params.corrected_emb}\
+		--method ${method}\
 		--celltype_key ${params.celltype_key}\
-		--output_clusters seurat_clusters_${method}.${datasetname}.csv 
+		--output_clusters louvain_leiden_clusters_${method}.${datasetname}.csv 
 	
     	"""
 	}

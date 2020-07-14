@@ -27,7 +27,7 @@ option_list = list(
     action = "store",
     default = NA,
     type = 'character',
-    help = 'Bacth correction method input comes from'
+    help = 'Bacth correction method the input comes from'
   ),
   make_option(
     c("-c", "--corrected_assay"),

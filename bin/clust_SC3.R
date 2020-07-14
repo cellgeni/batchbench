@@ -1,5 +1,9 @@
 #!/usr/bin/env Rscript
 
+# Run SC3 clustering. For integrated expression matrices. 
+
+# TODO: Set up the GENE FILTERIN
+
 suppressPackageStartupMessages(library("optparse"))
 
 option_list = list(
@@ -25,67 +29,107 @@ option_list = list(
     help = 'Corrected counts assay name'
   ),
   make_option(
-    c("-c", "--celltype_key"),
+    c("-m", "--method"),
+    action = "store",
+    default = NA,
+    type = 'character',
+    help = 'Batch correction method the input file comes from'
+  ),
+  make_option(
+    c("-t", "--celltype_key"),
     action = "store",
     default = "cell_type1",
     type = 'character',
     help = 'Cell type key in cell metadata'
   ),
   make_option(
+    c("-b", "--biology"),
+    action = "store",
+    default = TRUE,
+    type = 'logical',
+    help = 'Wether to calculate  biological features based on the identified cell clusters (DE genes, marker genes etc).'
+  ),
+  make_option(
     c("-o", "--output_clusters"),
     action = "store",
     default = NA,
     type = 'character',
-    help = 'Path to h5ad output file'
+    help = 'Output dataframe with cluster annotation'
+  ), 
+  make_option(
+    c("-r", "--output_rowdata"),
+    action = "store",
+    default = NA,
+    type = 'character',
+    help = 'Output dataframe with gene-based analysis'
   )
 )
 
 opt <- parse_args(OptionParser(option_list=option_list))
 
 suppressPackageStartupMessages(library(SingleCellExperiment))
-suppressPackageStartupMessages(library(SC3))
 
-#build sce with corrected counts matrix
-exp_sce <- function(dataset){
-  print("inside!")
-  counts_mat <- dataset@assays[["corrected"]]
+
+# FUNCTIONS #
+# build custom SCE object
+exp_sce <- function(dataset, assay_name){
+  counts_mat <- dataset@assays[[assay_name]]
   col_data <- dataset@colData
-  sce <- SingleCellExperiment(assays = list(logcounts = counts_mat), 
+  sce <- SingleCellExperiment(assays = list(logcounts = counts_mat),
                               colData = col_data)
-  return(sce)
+  sce
 }
 
-#common modifications applied to sce object
+# common modifications applied to SCE object
 common_modif_sc3 <- function(sce){
   rowData(sce)$feature_symbol <- rownames(sce)
   counts(sce) <- logcounts(sce)
-  return(sce)
+  sce
 }
-#run sc3 function
-run_sc3 <- function(sce){
+#run SC3 function
+run_SC3 <- function(sce, biology){
+  # load SC3 package
+  suppressPackageStartupMessages(library(SC3))
+  
   k <- length(table(sce[[celltype_key]])[table(sce[[celltype_key]]) > 0])
   k_vec <- c(k)
-  print(paste0("k values on clusteing:", k_vec))
-  #biology = T enables calculation of DE genes, and marker genes
-  sce_sc3 <- SC3::sc3(sce, ks = k_vec, gene_filter = F, biology = T)
+  print(paste0("k values on clustering:", k_vec))
+  # biology = T enables calculation of DE genes, and marker genes
+  sce_sc3 <- SC3::sc3(sce, ks = k_vec, gene_filter = FALSE, biology = biology)
   return(sce_sc3)
 }
 
 # args
 assay_name <- opt$assay_name
 corrected_assay <- opt$corrected_assay
+method <- opt$method
+if(is.null(method) || is.na(method)){ stop("Please provide the batch correction method the input file comes from") }
 celltype_key <- opt$celltype_key
-k_num = opt$k_num
+biology <- opt$biology
 
-#1. Obtain SCE object from input_path
-sce <- distribute_input(input_path = opt$input_object)
-#2. Add modifications to make SC3 work
+# read input file
+dataset <- readRDS(opt$input_object)
+# 1. Build SC3 custom SCE object
+if(method %in% c("logcounts", "Logcounts")){
+  sce <- exp_sce(dataset, assay_name = assay_name)
+  }else{
+  sce <- exp_sce(dataset, assay_name = corrected_assay)
+}
+# 2. Add modifications to make SCE object required by SC3
 sce <- common_modif_sc3(sce)
-#3. Run SC3
-sce_sc3 <- run_sc3(sce)
-#4. Extract metadata where the cluster annotation is
-sce_sc3_metadata <- sce_sc3@colData
-print(head(sce_sc3_metadata))
-#5. Save metadata
-write.csv(sce_sc3_metadata, file = opt$clusters, row.names = T, col.names = F)
+# 3. Run SC3
+sce_sc3 <- run_SC3(sce, biology = biology)
+# 4. Extract cluster annotation
+sc3_clust_annot <- sce_sc3@colData[, grep("sc3_", colnames(sce_sc3@colData))]
+print(head(sc3_clust_annot))
+# 5. Save cluster annotation
+write.csv(sc3_clust_annot, file = opt$output_clusters, row.names = T)
 print("SC3 Cluster annotation saved")
+
+if(biology == TRUE) {
+  # Extract gene 
+  gene_annot <- rowData(sce_sc3)
+  # Save 
+  write.csv(gene_annot, file = opt$output_rowdata, row.names = T)
+  print("SC3 Gene annotation saved")
+}
