@@ -123,11 +123,15 @@ dim_num = opt$dim_num
 # input file
 dataset <- readRDS(opt$input_object)
 
-batch_vector <- as.character(dataset$batch_key)
+batch_vector <- as.character(dataset$Batch)
 N_batches <- length(unique(batch_vector))
-cell_type_vector <- as.character(dataset[[celltype_key]])
+cell_type_vector <- as.character(dataset@colData[[celltype_key]])
 N_cell_types <- length(unique(cell_type_vector))
 
+print(batch_vector)
+print(N_batches)
+print(cell_type_vector)
+print(N_cell_types)
 # load scran package to compute KNN graph
 suppressPackageStartupMessages(require(scran))
 
@@ -140,7 +144,7 @@ if (method %in% c("bbknn", "BBKNN")){
 
 # for embedding correcting methods (fastMNN, harmony)
 if (method %in% c("fastMNN", "FastMNN", "Harmony", "harmony")){
-  corr_embedding <- dataset@reducedDims@listData[[corrected_emb]]
+  corr_embedding <- reducedDim(dataset, corrected_emb)
   print(corr_embedding)
   knn_graph <- build_knn_graph(corrected_space = corr_embedding, K_num = k_num, dim_num = dim_num, bool = TRUE)
   entropy <- compute_entropy(knn_graph = knn_graph, batch_vector, N_batches, cell_type_vector, N_cell_types)
@@ -148,10 +152,10 @@ if (method %in% c("fastMNN", "FastMNN", "Harmony", "harmony")){
 }
 
 # for counts matrix correcting methods except Seurat (logcounts, mnnCorrect, limma, ComBat, Scanorama)
-if (method %in% c("logcounts", "Logcounts", "mnnCorrect", "mnncorrect", "limma", "Limma", "ComBat", "combat", "Scanorama", "scanorama")){
+if (method %in% c("logcounts", "Logcounts", "mnnCorrect", "mnncorrect", "limma", "Limma", "ComBat", "combat", "Scanorama", "scanorama", "Seurat3", "seurat3", "Seurat")){
   if(method %in% c("logcounts", "Logcounts")){
     counts_mat <- assay(dataset, assay_name)
-  }else{counts_mat <- assay(dataset, corrected_assay)
+  } else { counts_mat <- assay(dataset, corrected_assay)
   }
   knn_graph <- build_knn_graph(corrected_space = counts_mat, K_num = k_num, dim_num = dim_num, bool = FALSE)
   entropy <- compute_entropy(knn_graph = knn_graph, batch_vector, N_batches, cell_type_vector, N_cell_types)
@@ -159,18 +163,18 @@ if (method %in% c("logcounts", "Logcounts", "mnnCorrect", "mnncorrect", "limma",
 }
 
 # for Seurat object
-if (method %in% c("Seurat3", "seurat3", "Seurat")){
-  suppressPackageStartupMessages(require(Seurat))
-  
-  batch_vector <- dataset@meta.data[[batch_key]]
-  N_batches <- length(unique(batch_vector))
-  cell_type_vector <- dataset@meta.data[[celltype_key]]
-  N_cell_types <- length(unique(cell_type_vector))
-  
-  counts_mat <- dataset@assays[[corrected_assay]]@data
-  knn_graph <- build_knn_graph(corrected_space = counts_mat, K_num = k_num, dim_num = dim_num, bool = FALSE)
-  entropy <- compute_entropy(knn_graph = knn_graph, batch_vector, N_batches, cell_type_vector, N_cell_types)
-  save_results(entropy, row_names = colnames(counts_mat))
-}
-
+#if (method %in% c("Seurat3", "seurat3", "Seurat")){
+#  suppressPackageStartupMessages(require(Seurat))
+#  
+#  batch_vector <- dataset@meta.data[[batch_key]]
+#  N_batches <- length(unique(batch_vector))
+#  cell_type_vector <- dataset@meta.data[[celltype_key]]
+#  N_cell_types <- length(unique(cell_type_vector))
+#  
+#  counts_mat <- dataset@assays[[corrected_assay]]@data
+#  knn_graph <- build_knn_graph(corrected_space = counts_mat, K_num = k_num, dim_num = dim_num, bool = FALSE)
+#  entropy <- compute_entropy(knn_graph = knn_graph, batch_vector, N_batches, cell_type_vector, N_cell_types)
+#  save_results(entropy, row_names = colnames(counts_mat))
+#}
+#
 print(paste0("Congrats! Entropy computed for method: ", method))

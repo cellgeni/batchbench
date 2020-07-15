@@ -38,5 +38,7 @@ seurat_obj <- readRDS(opt$input_object)
 if(!(corrected_assay %in% names(seurat_obj@assays))) stop("Corrected assay name provided not in Seurat object")
 # Convert Seurat to SCE
 seurat2sce <- as.SingleCellExperiment(seurat_obj, assay = corrected_assay)
+# by default as.SingleCellExperiment sets new assay to 'logcounts', rename it to 'corrected'
+names(assays(seurat2sce)) <- corrected_assay
 saveRDS(seurat2sce, opt$output_object)
 print("Seurat successfully converted to SCE object!")

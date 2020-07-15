@@ -39,7 +39,7 @@ process get_datasets {
 // preform QC based on min_genes expressed per cell, min_cells with expression per gene, remove batch and cell types representing less than bt_thres and ct_thres proportion of totalcells 
 if(params.QC_rds.run == "True"){
 process QC_rds{
-    	publishDir "${params.output_dir}/${datasetname}" 
+    	publishDir "${params.output_dir}/${datasetname}", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 10.GB * (task.attempt - 1) }
 	tag "QC $datasetname"
@@ -64,7 +64,6 @@ process QC_rds{
 }
 // Conv_1. Convert Sce objects to H5ad for the python tools
 process h5ad2sce {
-    	publishDir "${params.output_dir}/${datasetname}" 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 2.GB + 10.GB * (task.attempt - 1) }
 	tag "convert $datasetname sce2h5ad"
@@ -87,7 +86,7 @@ process h5ad2sce {
 // run BBKNN method
 if(params.BBKNN.run == "True"){
 process BBKNN {
-    	publishDir "${params.output_dir}/${datasetname}/Corrected_objects" 
+    	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
         tag "BBKNN $datasetname"
@@ -116,7 +115,7 @@ process BBKNN {
 // run Scanorama method
 if(params.scanorama.run == "True"){
 process Scanorama {
-    	publishDir "${params.output_dir}/${datasetname}/Corrected_objects" 
+    	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
      	tag "Scanorama $datasetname"
@@ -145,7 +144,7 @@ PY_TOOLS_2SEURAT = BBKNN_2SEURAT.mix(SCANORAMA_2SEURAT)
 // run Harmony method
 if(params.harmony.run == "True"){
 process Harmony {
-    	publishDir "${params.output_dir}/${datasetname}/Corrected_objects" 
+    	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
 	tag "Harmony $datasetname"
@@ -176,7 +175,7 @@ process Harmony {
 // run Limma method
 if(params.Limma.run == "True"){
 process Limma {
-	publishDir "${params.output_dir}/${datasetname}/Corrected_objects" 
+	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "Limma $datasetname"
@@ -206,7 +205,7 @@ process Limma {
 // run ComBat method
 if(params.Combat.run == "True"){
 process Combat{
-	publishDir "${params.output_dir}/${datasetname}/Corrected_objects" 
+	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "Combat $datasetname"
@@ -236,7 +235,7 @@ process Combat{
 // run Seurat 3 method
 if(params.Seurat_3.run == "True"){
 process Seurat_3{
- 	publishDir "${params.output_dir}/${datasetname}/Corrected_objects" 
+ 	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "Seurat 3 $datasetname"
@@ -245,7 +244,7 @@ process Seurat_3{
     	set val(datasetname), file(datain) from SEURAT3_METHOD
     	
 	output:
-    	set val(datasetname), val('Seurat3'), val('exp_matrix'), file('Seurat3.*.rds') into SEURAT_ENTROPY, SEURAT3_2H5AD, SEURAT3_2SCE, SEURAT3_CLUST_SEURAT, SEURAT3_MARKERS 
+    	set val(datasetname), val('Seurat3'), val('exp_matrix'), file('Seurat3.*.rds') into SEURAT3_2H5AD, SEURAT3_2SCE, SEURAT3_CLUST_SEURAT, SEURAT3_MARKERS 
     	
 	
     	"""
@@ -271,7 +270,7 @@ process Seurat_3{
 // run mnnCorrect method
 if(params.mnnCorrect.run == "True"){
 process mnnCorrect{
-	publishDir "${params.output_dir}/${datasetname}/Corrected_objects" 
+	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "mnnCorrect $datasetname"
@@ -307,7 +306,7 @@ process mnnCorrect{
 // run fastMNN method
 if(params.fastMNN.run == "True"){
 process fastMNN{
- 	publishDir "${params.output_dir}/${datasetname}/Corrected_objects" 
+ 	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "fastMNNt $datasetname"
@@ -372,7 +371,7 @@ process conv_seurat2sce {
         set val(datasetname), val(method), val(space_corrected), file(datain) from SEURAT3_2SCE 
 	
 	output:
- 	set val(datasetname), val(method), val(space_corrected), file('*.rds') into  SEURAT_CLUST_SC3, SEURAT_UMAP
+ 	set val(datasetname), val(method), val(space_corrected), file('*.rds') into SEURAT_ENTROPY, SEURAT_CLUST_SC3, SEURAT_UMAP
 	
 	"""
 	convert_seurat2sce.R\
@@ -442,9 +441,10 @@ if(params.entropy.run == "True"){
 
 // calculate Shannon entropy 
 process entropy {
+ 	publishDir "${params.output_dir}/${datasetname}/entropy", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 2.GB + 10.GB * (task.attempt - 1) }
-	tag "convert $datain sce2h5ad"
+	tag "compute entropy $datain"
 	
 	input:
         set val(datasetname), val(method), val(space_corrected), file(datain) from ENTROPY 
@@ -475,7 +475,7 @@ LOGCOUNTS_CLUST_SC3.mix(LIMMA_CLUST_SC3, COMBAT_CLUST_SC3, MNNCORRECT_CLUST_SC3,
 if(params.clust_SC3.run == "True"){
 
 process clust_SC3{
-    	publishDir "${params.output_dir}/${datasetname}/clustering" 
+    	publishDir "${params.output_dir}/${datasetname}/clustering", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "entropy (python) $datain $method $datasetname"
@@ -507,7 +507,7 @@ SEURAT3_CLUST_SEURAT.mix(PY_METHODS_CLUST_SEURAT, SCE_CLUST_SEURAT).set{ CLUST_S
 // run Seurat clustering
 if(params.clust_seurat.run == "True"){
 process clust_Seurat{
-    	publishDir "${params.output_dir}/${datasetname}/clustering" 
+    	publishDir "${params.output_dir}/${datasetname}/clustering", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "entropy (python) $datain $method $datasetname"
@@ -537,7 +537,7 @@ SEURAT3_MARKERS.mix(SCANORAMA_MARKERS, SCE_MARKERS_FILT).set{ MARKERS }
 // run marker genes
 if(params.find_markers.run == "True"){
 process find_markers{
-    	publishDir "${params.output_dir}/${datasetname}/markers" 
+    	publishDir "${params.output_dir}/${datasetname}/markers", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "entropy (python) $datain $method $datasetname"
@@ -592,7 +592,7 @@ process rds_to_h5ad_converter {
 BBKNN_UMAP.mix(SCANORAMA_UMAP, R_TOOLS_UMAP).set{ ALL_UMAP }
 
 process py_UMAP {
-    	publishDir "${params.output_dir}/${datasetname}/UMAP" , pattern: '*.csv' 
+    	publishDir "${params.output_dir}/${datasetname}/UMAP" , mode: 'copy', pattern: '*.csv' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "UMAP $datain $method $datasetname"
