@@ -47,7 +47,7 @@ option_list = list(
     action = "store",
     default = TRUE,
     type = 'logical',
-    help = 'Wether to calculate  biological features based on the identified cell clusters (DE genes, marker genes etc).'
+    help = 'Wether to calculate biological features based on the identified cell clusters (DE genes, marker genes etc).'
   ),
   make_option(
     c("-o", "--output_clusters"),
@@ -68,12 +68,13 @@ option_list = list(
 opt <- parse_args(OptionParser(option_list=option_list))
 
 suppressPackageStartupMessages(library(SingleCellExperiment))
+suppressPackageStartupMessages(require(SC3))
 
 
 # FUNCTIONS #
 # build custom SCE object
 exp_sce <- function(dataset, assay_name){
-  counts_mat <- dataset@assays[[assay_name]]
+  counts_mat <- assay(dataset, assay_name)
   col_data <- dataset@colData
   sce <- SingleCellExperiment(assays = list(logcounts = counts_mat),
                               colData = col_data)
@@ -87,9 +88,7 @@ common_modif_sc3 <- function(sce){
   sce
 }
 #run SC3 function
-run_SC3 <- function(sce, biology){
-  # load SC3 package
-  suppressPackageStartupMessages(library(SC3))
+run_SC3 <- function(sce, celltype_key, biology){
   
   k <- length(table(sce[[celltype_key]])[table(sce[[celltype_key]]) > 0])
   k_vec <- c(k)
@@ -118,7 +117,7 @@ if(method %in% c("logcounts", "Logcounts")){
 # 2. Add modifications to make SCE object required by SC3
 sce <- common_modif_sc3(sce)
 # 3. Run SC3
-sce_sc3 <- run_SC3(sce, biology = biology)
+sce_sc3 <- run_SC3(sce, celltype_key, biology = biology)
 # 4. Extract cluster annotation
 sc3_clust_annot <- sce_sc3@colData[, grep("sc3_", colnames(sce_sc3@colData))]
 print(head(sc3_clust_annot))

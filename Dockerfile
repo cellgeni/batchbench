@@ -1,4 +1,4 @@
-FROM r-base:3.6.3
+FROM r-base:4.0.0
 #
 RUN apt-get update --fix-missing && apt-get install -y procps wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion build-essential libcurl4-gnutls-dev libssl-dev libxml2-dev libhdf5-dev
 
@@ -17,7 +17,7 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-${MINICONDA_VERS
 # python packages
 ENV PYTHON_VERSION=3.7.4
 RUN conda install python=${PYTHON_VERSION}
-RUN pip install scipy scanpy bbknn scanorama
+RUN pip install scipy scanpy bbknn scanorama leidenalg igraph
 
 # Install other CRAN
 RUN Rscript -e 'install.packages(c("Seurat", "rJava", "umap","ggplot2", "ggfortify", "Rmagic", "BiocManager", "devtools","lsa","uwot", "SC3", "optparse"), dependencies = TRUE)'

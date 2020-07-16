@@ -481,7 +481,7 @@ process clust_SC3{
     	tag "entropy (python) $datain $method $datasetname"
 
     	input:
-    	set val(datasetname), val(method), file(datain) from CLUST_SC3
+    	set val(datasetname), val(method), val(space_corrected), file(datain) from CLUST_SC3
     	output:
     	file('*.csv')
 
@@ -492,10 +492,9 @@ process clust_SC3{
 		--corrected_assay ${params.corrected_assay}\
 		--method ${method}\
 		--celltype_key ${params.celltype_key}\
-		--biology ${biology}\
+		--biology ${params.clust_SC3.biology}\
 		--output_clusters SC3_clusters_${method}.${datasetname}.csv\
 		--output_rowdata SC3_features_${method}.${datasetname}.csv 
-	
     	"""
 	}
 }
@@ -513,7 +512,7 @@ process clust_Seurat{
     	tag "entropy (python) $datain $method $datasetname"
 
     	input:
-    	set val(datasetname), val(method), file(datain) from CLUST_SEURAT
+    	set val(datasetname), val(method), val(space_corrected), file(datain) from CLUST_SEURAT
     	output:
     	file('*.csv')
 
@@ -525,7 +524,9 @@ process clust_Seurat{
 		--corrected_emb ${params.corrected_emb}\
 		--method ${method}\
 		--celltype_key ${params.celltype_key}\
-		--output_clusters louvain_leiden_clusters_${method}.${datasetname}.csv 
+		--n_pcs ${params.clust_seurat.n_pcs}\
+		--k_num ${params.clust_seurat.k_num}\
+		--output_clusters louvain_leiden_clusters.${method}.${datasetname}.csv 
 	
     	"""
 	}

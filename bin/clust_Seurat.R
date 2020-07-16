@@ -48,18 +48,18 @@ option_list = list(
     help = 'Cell type key in cell metadata'
   ),
   make_option(
-    c("-k", "--k_num"),
-    action = "store",
-    default = 30,
-    type = 'integer',
-    help = 'Number of nearest neighbors for the NN graph construction'
-  ),
-  make_option(
     c("-p", "--n_pcs"),
     action = "store",
     default = 25,
     type = 'integer',
     help = 'Number of Principal Components to perform Dimensionality Reduction'
+  ),
+  make_option(
+    c("-k", "--k_num"),
+    action = "store",
+    default = 30,
+    type = 'integer',
+    help = 'Number of nearest neighbors for the NN graph construction'
   ),
   make_option(
     c("-o", "--output_clusters"),
@@ -156,7 +156,7 @@ if (method %in% c("fastMNN", "FastMNN", "Harmony", "harmony")){
   # find clusters Louvain 
   louvain_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
   # find clusters Leiden
-  leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 4)
+  leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
   # merge Louvain & Leiden annots
   clust_dat <- merge_annots(louvain = louvain_clusters, leiden = leiden_clusters, cell_names = colnames(dataset))
   # save data
@@ -178,7 +178,7 @@ if (method %in% c("logcounts", "Logcounts", "mnnCorrect", "mnncorrect", "limma",
   # find clusters Louvain 
   louvain_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
   # find clusters Leiden
-  leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 4)
+  leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
   # merge Louvain & Leiden annots
   clust_dat <- merge_annots(louvain = louvain_clusters, leiden = leiden_clusters, cell_names = colnames(dataset))
   # save data
@@ -198,7 +198,7 @@ if (method %in% c("Seurat3", "seurat3", "Seurat")){
   # find clusters Louvain 
   louvain_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
   # find clusters Leiden
-  leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 4)
+  leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
   # merge Louvain & Leiden annots
   clust_dat <- merge_annots(louvain = louvain_clusters, leiden = leiden_clusters, cell_names = colnames(dataset))
   # save data
