@@ -2,7 +2,7 @@
 
 suppressPackageStartupMessages(library("optparse"))
 
-option_list = list(
+option_list = list (
     make_option(
         c("-i", "--input_object"),
         action = "store",
@@ -40,14 +40,16 @@ option_list = list(
    ) 
 )
 
-suppressPackageStartupMessages(library(reticulate)) 
+opt <- parse_args(OptionParser(option_list=option_list))
+
+#suppressPackageStartupMessages(library(reticulate)) 
 suppressPackageStartupMessages(library(SingleCellExperiment)) 
 suppressPackageStartupMessages(library(loomR))
-suppressPackageStartupMessages(library(sceasy)
+suppressPackageStartupMessages(library(sceasy))
 
 # args 
 assay_name <- opt$assay_name
-corrected_assay <- opt$corrected_assay 
+corrected_assay <- opt$corrected_assay
 corrected_emb <- opt$corrected_emb
 # read input file
 dataset <- readRDS(opt$input_object)

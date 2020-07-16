@@ -475,10 +475,10 @@ LOGCOUNTS_CLUST_SC3.mix(LIMMA_CLUST_SC3, COMBAT_CLUST_SC3, MNNCORRECT_CLUST_SC3,
 if(params.clust_SC3.run == "True"){
 
 process clust_SC3{
-    	publishDir "${params.output_dir}/${datasetname}/clustering", mode: 'copy' 
+    	publishDir "${params.output_dir}/${datasetname}/Clustering/SC3_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
-    	tag "entropy (python) $datain $method $datasetname"
+    	tag "SC3 Clust $method $datasetname"
 
     	input:
     	set val(datasetname), val(method), val(space_corrected), file(datain) from CLUST_SC3
@@ -506,17 +506,17 @@ SEURAT3_CLUST_SEURAT.mix(PY_METHODS_CLUST_SEURAT, SCE_CLUST_SEURAT).set{ CLUST_S
 // run Seurat clustering
 if(params.clust_seurat.run == "True"){
 process clust_Seurat{
-    	publishDir "${params.output_dir}/${datasetname}/clustering", mode: 'copy' 
+    	publishDir "${params.output_dir}/${datasetname}/Clustering/Seurat_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
-    	tag "entropy (python) $datain $method $datasetname"
+    	tag "Seurat Clust $method $datasetname"
 
     	input:
     	set val(datasetname), val(method), val(space_corrected), file(datain) from CLUST_SEURAT
     	output:
     	file('*.csv')
-
-    	"""
+    	
+	"""
     	clust_Seurat.R\
 		--input_object ${datain}\
 		--assay_name ${params.assay_name}\
@@ -538,18 +538,18 @@ SEURAT3_MARKERS.mix(SCANORAMA_MARKERS, SCE_MARKERS_FILT).set{ MARKERS }
 // run marker genes
 if(params.find_markers.run == "True"){
 process find_markers{
-    	publishDir "${params.output_dir}/${datasetname}/markers", mode: 'copy' 
+    	publishDir "${params.output_dir}/${datasetname}/Markers", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
-    	tag "entropy (python) $datain $method $datasetname"
+    	tag "Markers $method $datasetname"
 
     	input:
-    	set val(datasetname), val(method), file(datain) from MARKERS
+    	set val(datasetname), val(method), val(space_corrected), file(datain) from MARKERS
     	output:
     	file('*.csv')
 
     	"""
-    	clust_Seurat.R\
+    	find_markers.R\
 		--input_object ${datain}\
 		--assay_name ${params.assay_name}\
 		--corrected_assay ${params.corrected_assay}\
@@ -565,22 +565,22 @@ process find_markers{
 LOGCOUNTS_UMAP.mix(HARMONY_UMAP, LIMMA_UMAP, COMBAT_UMAP, SEURAT_UMAP, MNNCORRECT_UMAP, FASTMNN_UMAP).set{SCE_UMAP}
 // run UMAP
 
-if(params.Py_UMAP.run == "True"){
+if(params.UMAP.run == "True"){
 // Conv_5 Convert RDS (SCE and Seurat) to H5ad objects to compute UMAP only in Python
-process rds_to_h5ad_converter {
+process conv_rds2h5ad {
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
-    	tag "rds_to_h5ad_converter $datain $method $datasetname"
+    	tag "conv_rds2h5ad $method $datasetname"
     	label "fast_running"
     	
 	input:
-    	set val(datasetname), val(method), file(datain) from SCE_UMAP
+    	set val(datasetname), val(method), val(space_corrected), file(datain) from SCE_UMAP
     	
 	output:
-    	set val(datasetname), val(method), file('*.h5ad') into R_TOOLS_UMAP 
+    	set val(datasetname), val(method), val(space_corrected), file('*.h5ad') into R_TOOLS_UMAP 
     	
     	"""
-   	rds_h5ad_converter.R\
+   	convert_rds2h5ad.R\
 		 --input ${datain}\
 		 --assay_name ${params.assay_name}\
 		 --corrected_assay ${params.corrected_assay}\
@@ -592,23 +592,23 @@ process rds_to_h5ad_converter {
 //Merge Python and converted R outputs for UMAP computation
 BBKNN_UMAP.mix(SCANORAMA_UMAP, R_TOOLS_UMAP).set{ ALL_UMAP }
 
-process py_UMAP {
+process UMAP {
     	publishDir "${params.output_dir}/${datasetname}/UMAP" , mode: 'copy', pattern: '*.csv' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
-    	tag "UMAP $datain $method $datasetname"
+    	tag "UMAP $method $datasetname"
     	
 	input:
-    	set val(datasetname), val(method), file(datain) from ALL_UMAP
+    	set val(datasetname), val(method), val(space_corrected), file(datain) from ALL_UMAP
     	
 	output:
     	file('*.csv')
     	
     	"""
-    	Py_UMAP.py\
+    	run_UMAP.py\
 		--input_object ${datain}\
-		--n_neighbours ${params.Py_UMAP.n_neighbours}\
-		--n_pcs ${params.Py_UMAP.n_pcs}\
+		--n_neighbours ${params.UMAP.n_neighbours}\
+		--n_pcs ${params.UMAP.n_pcs}\
 		--output_umap umap.${method}.${datasetname}.csv  
     	"""
 	}

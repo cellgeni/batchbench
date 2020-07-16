@@ -126,7 +126,7 @@ if (method %in% c("bbknn", "BBKNN")){
   # find clusters Louvain 
   louvain_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
   # find clusters Leiden
-  leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 4)
+  leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
   # merge Louvain & Leiden annots
   clust_dat <- merge_annots(louvain = louvain_clusters, leiden = leiden_clusters, cell_names = colnames(dataset))
   # save data
@@ -141,7 +141,7 @@ if (method %in% c("fastMNN", "FastMNN", "Harmony", "harmony")){
   # find clusters Louvain 
   louvain_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
   # find clusters Leiden
-  leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 4)
+  leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
   # merge Louvain & Leiden annots
   clust_dat <- merge_annots(louvain = louvain_clusters, leiden = leiden_clusters, cell_names = colnames(dataset))
   # save data
