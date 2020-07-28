@@ -83,14 +83,14 @@ extract_bbknn_graph <- function(h5ad_file){
 }
 
 # build SCE object from H5ad object parts
-build_sce <- function(counts_mat, meta_data, gene_names, emb_list){
-  sce <- SingleCellExperiment(assays = list(corrected = counts_mat),
-                              colData = meta_data,
-                              reducedDims = emb_list)
-  # if present , add rownames
-  if(!is.null(gene_names)){rowData(sce) <- data.frame("feature_names" = gene_names)}
-  sce
-}
+#build_sce <- function(counts_mat, meta_data, gene_names, emb_list){
+#  sce <- SingleCellExperiment(assays = list(corrected = counts_mat),
+#                              colData = meta_data,
+#                              reducedDims = emb_list)
+#  # if present , add rownames
+#  if(!is.null(gene_names)){rowData(sce) <- data.frame("feature_names" = gene_names)}
+#  sce
+#}
 
 # build Seurat object
 build_seurat <- function(counts_mat, corrected_assay, meta_data, emb_list, add_graph){

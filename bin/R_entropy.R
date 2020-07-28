@@ -128,16 +128,12 @@ N_batches <- length(unique(batch_vector))
 cell_type_vector <- as.character(dataset@colData[[celltype_key]])
 N_cell_types <- length(unique(cell_type_vector))
 
-print(batch_vector)
-print(N_batches)
-print(cell_type_vector)
-print(N_cell_types)
 # load scran package to compute KNN graph
 suppressPackageStartupMessages(require(scran))
 
 # for graph correcting methods (BBKNN)
 if (method %in% c("bbknn", "BBKNN")){
-  corrected_graph <- assay(dataset, corrected_assay) # graph stored in assay in SCE for BBKNN
+  corrected_graph <- assay(dataset, "connectivities") # graph stored in assay in SCE for BBKNN
   entropy <- compute_entropy(knn_graph = corrected_graph, batch_vector, N_batches, cell_type_vector, N_cell_types)
   save_results(entropy, row_names = rownames(corrected_graph))
 }

@@ -66,7 +66,7 @@ process QC_rds{
 process h5ad2sce {
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 2.GB + 10.GB * (task.attempt - 1) }
-	tag "convert $datasetname sce2h5ad"
+	tag "h5ad2sce $datasetname"
 	
 	input:
         set val(datasetname), file(datain) from SCE2H5AD_INPUT
@@ -139,7 +139,9 @@ process Scanorama {
 	SCANORAMA_UMAP = Channel.empty()
 }
 
+// Send to converters
 PY_TOOLS_2SEURAT = BBKNN_2SEURAT.mix(SCANORAMA_2SEURAT)
+PY_TOOLS_2SCE = BBKNN_2SCE.mix(SCANORAMA_2SCE)
 
 // run Harmony method
 if(params.harmony.run == "True"){
@@ -340,11 +342,10 @@ process fastMNN{
 process conv_h5ad2sce {
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 2.GB + 10.GB * (task.attempt - 1) }
-	tag "convert $datasetname sce2h5ad"
+	tag "sce2h5ad $method $datasetname"
 	
 	input:
-        set val(datasetname), val(method), val(space_corrected), file(datain) from BBKNN_2SCE  
-        set val(datasetname), val(method), val(space_corrected), file(datain) from SCANORAMA_2SCE 
+	set val(datasetname), val(method), val(space_corrected), file(datain) from PY_TOOLS_2SCE
 	
 	output:
  	set val(datasetname), val(method), val(space_corrected), file('*.rds') into PY_METHODS_ENTROPY, PY_METHODS_CLUST_SC3 
@@ -365,7 +366,7 @@ SCANORAMA_CLUST_SC3  = PY_METHODS_CLUST_SC3.filter{ it[2] == "scanorama" }
 process conv_seurat2sce {
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 2.GB + 10.GB * (task.attempt - 1) }
-	tag "convert $datasetname seurat2sce"
+	tag "seurat2sce $method $datasetname"
 	
 	input:
         set val(datasetname), val(method), val(space_corrected), file(datain) from SEURAT3_2SCE 
@@ -386,7 +387,7 @@ process conv_seurat2sce {
 process conv_h5ad2seurat{
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
-     	tag "h5ad2seurat $datasetname"
+	tag "h5ad2seurat $method $datasetname"
      	
 	input:
      	set val(datasetname), val(method), val(space_corrected), file(datain) from PY_TOOLS_2SEURAT 
@@ -413,7 +414,7 @@ LOGCOUNTS_2SEURAT.mix(HARMONY_2SEURAT, LIMMA_2SEURAT, COMBAT_2SEURAT, MNNCORRECT
 process conv_sce2seurat{
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
-     	tag "h5ad2sce $datasetname"
+	tag "sce2seurat $method $datasetname"
      	
 	input:
 	set val(datasetname), val(method), val(space_corrected), file(datain) from CONV_SCE2SEURAT 

@@ -46,7 +46,7 @@ extract_counts <- function(h5ad_file){
   gene_names <- extract_var_names(h5ad_file)
   cell_names <- extract_obs_names(h5ad_file)
   dimnames(counts_mat) <- list(gene_names, cell_names)
-  counts_mat
+  list(corrected = counts_mat)
 }
 
 # extract metadata
@@ -70,22 +70,28 @@ extract_obs_names <- function(h5ad_file){
 }
 # function to extract var_names
 extract_var_names <- function(h5ad_file){
-  obs_names <- as.vector(h5ad_file$var_names$values)
-  obs_names
+  var_names <- as.vector(h5ad_file$var_names$values)
+  var_names
 }
-
+# set matrix dimnames
+set_dimnames <- function(mat, cell_names){
+     dimnames(mat) <- list(cell_names, cell_names)
+     mat
+}
 # function to extract BBKNN graph
-extract_bbknn_graph <- function(h5ad_file){
-  #graph_conn <- as(reticulate::py_to_r(h5ad_file$uns$neighbors$connectivities)$toarray(), "dgCMatrix")
-  graph_conn <- as(reticulate::py_to_r(h5ad_file$obsp$connectivities)$toarray(), "dgCMatrix")
+extract_bbknn_graphs <- function(h5ad_file){
+  connect_graph <- as(reticulate::py_to_r(h5ad_file[["obsp"]][["connectivities"]]$toarray()), "dgCMatrix")
+  dist_graph <- as(reticulate::py_to_r(h5ad_file[["obsp"]][["distances"]]$toarray()), "dgCMatrix")
+  graph_list <- list(connectivities = connect_graph, distances = dist_graph)
   cell_names <- extract_obs_names(h5ad_file)
-  dimnames(graph_conn) <- list(cell_names, cell_names)
-  graph_conn
+  # set matrix dimnames
+  graph_list <- lapply(graph_list, function(mat) set_dimnames(mat, cell_names = cell_names))
+  graph_list
 }
 
 # build SCE object from H5ad object parts
-build_sce <- function(counts_mat, meta_data, gene_names, emb_list){
-  sce <- SingleCellExperiment(assays = list(corrected = counts_mat),
+build_sce <- function(assay_list, meta_data, gene_names, emb_list){
+  sce <- SingleCellExperiment(assays = assay_list, 
                               colData = meta_data,
                               reducedDims = emb_list)
   # if present , add rownames
@@ -112,7 +118,7 @@ numpy <- reticulate::import('numpy', convert = F)
 # Scanorama h5ad object conversion
 if(method %in% c("scanorama", "Scanorama")){
   # extract counts
-  counts_mat <- extract_counts(h5ad_file)
+  counts_mat_list <- extract_counts(h5ad_file)
   # extract metadata
   meta_data <- extract_metadata(h5ad_file)
   # extract embeddings
@@ -120,13 +126,13 @@ if(method %in% c("scanorama", "Scanorama")){
   # extract gene names
   gene_names <- extract_var_names(h5ad_file)
   # build SCE
-  sce <- build_sce(counts_mat = counts_mat, meta_data = meta_data, gene_names = gene_names, emb_list = emb_list)
+  sce <- build_sce(assay_list = counts_mat_list, meta_data = meta_data, gene_names = gene_names, emb_list = emb_list)
 }
 
 # BBKNN h5ad object conversion
 if(method %in% c("bbknn", "BBKNN")){
   # extract graph
-  graph_conn <- extract_bbknn_graph(h5ad_file)
+  graph_list <- extract_bbknn_graphs(h5ad_file)
   # extract metadata
   meta_data <- extract_metadata(h5ad_file)
   # extract embeddings
@@ -134,7 +140,7 @@ if(method %in% c("bbknn", "BBKNN")){
   # extract gene names
   cell_names <- extract_var_names(h5ad_file)
   # build SCE
-  sce <- build_sce(counts_mat = graph_conn, meta_data = meta_data, gene_names = NULL, emb_list = emb_list)
+  sce <- build_sce(assay_list = graph_list, meta_data = meta_data, gene_names = NULL, emb_list = emb_list)
 }
 
 # save converted object

@@ -17,7 +17,7 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-${MINICONDA_VERS
 # python packages
 ENV PYTHON_VERSION=3.7.4
 RUN conda install python=${PYTHON_VERSION}
-RUN pip install scipy scanpy bbknn scanorama leidenalg igraph
+RUN pip install scipy scanpy bbknn scanorama leidenalg
 
 # Install other CRAN
 RUN Rscript -e 'install.packages(c("Seurat", "rJava", "umap","ggplot2", "ggfortify", "Rmagic", "BiocManager", "devtools","lsa","uwot", "SC3", "optparse"), dependencies = TRUE)'
