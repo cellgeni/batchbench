@@ -178,7 +178,7 @@ if (method %in% c("logcounts", "Logcounts", "mnnCorrect", "mnncorrect", "limma",
   # find clusters Louvain 
   louvain_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
   # find clusters Leiden
-  leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
+  leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 4)
   # merge Louvain & Leiden annots
   clust_dat <- merge_annots(louvain = louvain_clusters, leiden = leiden_clusters, cell_names = colnames(dataset))
   # save data
@@ -198,7 +198,7 @@ if (method %in% c("Seurat3", "seurat3", "Seurat")){
   # find clusters Louvain 
   louvain_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
   # find clusters Leiden
-  leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
+  leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 4)
   # merge Louvain & Leiden annots
   clust_dat <- merge_annots(louvain = louvain_clusters, leiden = leiden_clusters, cell_names = colnames(dataset))
   # save data
