@@ -435,7 +435,7 @@ process conv_sce2seurat{
 SCE_MARKERS_FILT  = SCE_MARKERS.filter{ it[2] != "harmony" || it[2] != "fastMNN" }
 
 // Merge input channels for entropy
-LOGCOUNTS_ENTROPY.mix(HARMONY_ENTROPY, LIMMA_ENTROPY, COMBAT_ENTROPY, MNNCORRECT_ENTROPY, FASTMNN_ENTROPY, PY_METHODS_ENTROPY,  SEURAT_ENTROPY).set{ENTROPY}
+LOGCOUNTS_ENTROPY.mix(HARMONY_ENTROPY, LIMMA_ENTROPY, COMBAT_ENTROPY, MNNCORRECT_ENTROPY, FASTMNN_ENTROPY, PY_METHODS_ENTROPY,  SEURAT_ENTROPY).into{ENTROPY; CLUST_HIERARCH}
 
 // compute entropy 
 if(params.entropy.run == "True"){
@@ -528,11 +528,33 @@ process clust_Seurat{
 		--n_pcs ${params.clust_seurat.n_pcs}\
 		--k_num ${params.clust_seurat.k_num}\
 		--output_clusters louvain_leiden_clusters.${method}.${datasetname}.csv 
-	
     	"""
 	}
 }
+// run hierarchical clustering
+if(params.clust_hierarch.run == "True"){
+process clust_hierarch{
+    	publishDir "${params.output_dir}/${datasetname}/Clustering/Hierarch_Clust", mode: 'copy' 
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	memory = { 5.GB + 20.GB * (task.attempt - 1) }
+    	tag "Hierarch Clust $method $datasetname"
 
+    	input:
+    	set val(datasetname), val(method), val(space_corrected), file(datain) from CLUST_HIERARCH 
+    	output:
+    	file('*.csv')
+
+	"""
+    	clust_hierarchical.R\
+		--input_object ${datain}\
+		--assay_name ${params.assay_name}\
+		--corrected_assay ${params.corrected_assay}\
+		--method ${method}\
+		--corrected_emb ${params.corrected_emb}\
+		--output_clusters louvain_leiden_clusters.${method}.${datasetname}.csv 
+    	"""
+
+}
 // Merge all Seurat FindMarkers input channel 
 SEURAT3_MARKERS.mix(SCANORAMA_MARKERS, SCE_MARKERS_FILT).set{ MARKERS }
 
