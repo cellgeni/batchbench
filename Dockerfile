@@ -26,6 +26,6 @@ RUN Rscript -e 'install.packages(c("Seurat", "rJava", "umap","ggplot2", "ggforti
 RUN Rscript -e 'BiocManager::install(c("limma", "SummarizedExperiment", "SingleCellExperiment", "DropletUtils", "LoomExperiment", "Rhdf5lib", "scater", "scran", "RUVSeq", "sva", "MultiAssayExperiment", "batchelor", "SC3"))'
 
 # install github packages
-RUN Rscript -e 'devtools::install_github(c("immunogenomics/harmony", "LTLA/beachmat", "cellgeni/sceasy", "mojaveazure/loomR"))'
+RUN Rscript -e 'devtools::install_github(c("immunogenomics/harmony",  "cellgeni/sceasy", "mojaveazure/loomR"))'
 
 ENV OPENBLAS_CORETYPE=nehalem
