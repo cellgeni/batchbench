@@ -48,7 +48,7 @@ process QC_rds{
         set val(datasetname), file(datain) from QC_RDS_CH
         
 	output:
-	set val(datasetname), file('QC.*.rds') into SCE2H5AD_INPUT, HARMONY_METHOD, LIMMA_METHOD, COMBAT_METHOD, SEURAT3_METHOD, MNNCORRECT_METHOD, FASTMNN_METHOD
+	set val(datasetname), file('QC.*.rds') into SUBSET_FEATURES, SCE2H5AD_INPUT, HARMONY_METHOD, LIMMA_METHOD, COMBAT_METHOD, SEURAT3_METHOD, MNNCORRECT_METHOD, FASTMNN_METHOD
         set val(datasetname), val('logcounts'), val('exp_matrix'), file("QC.*.rds") into LOGCOUNTS_ENTROPY, LOGCOUNTS_UMAP, LOGCOUNTS_CLUST_SC3, LOGCOUNTS_2SEURAT, LOGCOUNTS_MARKERS
 	
         """
@@ -62,6 +62,32 @@ process QC_rds{
         """
 	}
 }
+
+// subset genes by their coeficient of variation according to certain proportions
+PROP_GENES = Channel.from(0.05, 0.1, 0.2, 0.5, 1)
+// combine channels
+SUBSET_FEATURES_CV = SUBSET_FEATURES.combine(PROP_GENES)
+
+process subset_genes_by_cv {
+    	publishDir "${params.output_dir}/${datasetname}/Subset_features", mode: 'copy' 
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	memory = { 2.GB + 10.GB * (task.attempt - 1) }
+	tag "$datasetname subset $prop_genes genes by coeff. variation"
+	
+	input:
+	set val(datasetname), file(datain), val(prop_genes) from SUBSET_FEATURES_CV
+	
+	output:
+	set val(prop_genes), file("features_*.csv") into CLUST_SC3_FEATURES, CLUST_SEURAT_FEATURES, CLUST_HIERARCH_FEATURES
+	"""
+	subset_genes_by_cv.R\
+		--input_object ${datain}\
+		--assay_name ${params.assay_name}\
+		--prop_genes ${prop_genes}\
+		--output_genes features_${prop_genes}.${datasetname}.csv
+	"""
+}
+
 // Conv_1. Convert Sce objects to H5ad for the python tools
 process h5ad2sce {
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
@@ -479,23 +505,25 @@ process clust_SC3{
     	publishDir "${params.output_dir}/${datasetname}/Clustering/SC3_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
-    	tag "SC3 Clust $method $datasetname"
+    	tag "SC3 Clust $method $datasetname $prop_genes features"
 
     	input:
     	set val(datasetname), val(method), val(space_corrected), file(datain) from CLUST_SC3
+	set val(prop_genes), file(features) from CLUST_SC3_FEATURES
     	output:
     	file('*.csv')
 
     	"""
     	clust_SC3.R\
 		--input_object ${datain}\
+		--input_features ${features}\
 		--assay_name ${params.assay_name}\
 		--corrected_assay ${params.corrected_assay}\
 		--method ${method}\
 		--celltype_key ${params.celltype_key}\
 		--biology ${params.clust_SC3.biology}\
-		--output_clusters SC3_clusters_${method}.${datasetname}.csv\
-		--output_rowdata SC3_features_${method}.${datasetname}.csv 
+		--output_clusters SC3_clusters_${method}.${datasetname}.features_${prop_genes}.csv\
+		--output_rowdata SC3_features_${method}.${datasetname}.features_${prop_genes}.csv 
     	"""
 	}
 }
@@ -510,16 +538,18 @@ process clust_Seurat{
     	publishDir "${params.output_dir}/${datasetname}/Clustering/Seurat_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
-    	tag "Seurat Clust $method $datasetname"
+    	tag "Seurat Clust $method $datasetname $prop_genes features"
 
     	input:
     	set val(datasetname), val(method), val(space_corrected), file(datain) from CLUST_SEURAT
+	set val(prop_genes), file(features) from CLUST_SEURAT_FEATURES
     	output:
     	file('*.csv')
     	
 	"""
     	clust_Seurat.R\
 		--input_object ${datain}\
+		--input_features ${features}\
 		--assay_name ${params.assay_name}\
 		--corrected_assay ${params.corrected_assay}\
 		--corrected_emb ${params.corrected_emb}\
@@ -527,33 +557,37 @@ process clust_Seurat{
 		--celltype_key ${params.celltype_key}\
 		--n_pcs ${params.clust_seurat.n_pcs}\
 		--k_num ${params.clust_seurat.k_num}\
-		--output_clusters louvain_leiden_clusters.${method}.${datasetname}.csv 
+		--output_clusters louvain_leiden_clusters.${method}.${datasetname}.features_${prop_genes}.csv 
     	"""
 	}
 }
+
 // run hierarchical clustering
 if(params.clust_hierarch.run == "True"){
-process clust_hierarch{
+process clust_hierarch {
     	publishDir "${params.output_dir}/${datasetname}/Clustering/Hierarch_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 5.GB + 20.GB * (task.attempt - 1) }
-    	tag "Hierarch Clust $method $datasetname"
+    	tag "Hierarch Clust $method $datasetname $prop_genes features"
 
     	input:
     	set val(datasetname), val(method), val(space_corrected), file(datain) from CLUST_HIERARCH 
+	set val(prop_genes), file(features) from CLUST_HIERARCH_FEATURES
     	output:
     	file('*.csv')
 
 	"""
     	clust_hierarchical.R\
 		--input_object ${datain}\
+		--input_features ${features}\
 		--assay_name ${params.assay_name}\
 		--corrected_assay ${params.corrected_assay}\
 		--method ${method}\
 		--corrected_emb ${params.corrected_emb}\
-		--output_clusters louvain_leiden_clusters.${method}.${datasetname}.csv 
+		--output_clusters hierarch_clusters.${method}.${datasetname}.features_${prop_genes}.csv 
     	"""
 
+	}
 }
 // Merge all Seurat FindMarkers input channel 
 SEURAT3_MARKERS.mix(SCANORAMA_MARKERS, SCE_MARKERS_FILT).set{ MARKERS }

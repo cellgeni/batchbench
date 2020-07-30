@@ -2,8 +2,6 @@
 
 # Run SC3 clustering. For integrated expression matrices. 
 
-# TODO: Set up the GENE FILTERIN
-
 suppressPackageStartupMessages(library("optparse"))
 
 option_list = list(
@@ -13,6 +11,13 @@ option_list = list(
     default = NA,
     type = 'character',
     help = 'Path to rds input file'
+  ),
+  make_option(
+    c("-f", "--input_features"),
+    action = "store",
+    default = NA,
+    type = 'character',
+    help = 'Features names subsetted by coefficient of variation'
   ),
   make_option(
     c("-a", "--assay_name"),
@@ -106,8 +111,12 @@ if(is.null(method) || is.na(method)){ stop("Please provide the batch correction 
 celltype_key <- opt$celltype_key
 biology <- opt$biology
 
-# read input file
+# read input files
 dataset <- readRDS(opt$input_object)
+features <- as.character(read.csv(opt$input_features, row.names =1, header = T)$x)
+# subset input object by features
+dataset <- dataset[features, ]
+
 # 1. Build SC3 custom SCE object
 if(method %in% c("logcounts", "Logcounts")){
   sce <- exp_sce(dataset, assay_name = assay_name)

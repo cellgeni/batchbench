@@ -12,6 +12,13 @@ option_list = list(
     type = 'character',
     help = 'Path to rds input file'
   ),
+ make_option(
+    c("-f", "--input_features"),
+    action = "store",
+    default = NA,
+    type = 'character',
+    help = 'Features names subsetted by coefficient of variation'
+  ),
   make_option(
     c("-a", "--assay_name"),
     action = "store",
@@ -105,8 +112,7 @@ merge_annots <- function(louvain, leiden, cell_names){
 }
 
 suppressPackageStartupMessages(library(Seurat))
-# read input file
-dataset <- readRDS(opt$input_object)
+
 # args
 assay_name <- opt$assay_name
 corrected_assay <- opt$corrected_assay
@@ -116,6 +122,12 @@ k_num <-  opt$k_num
 n_pcs <- opt$n_pcs
 method <- opt$method
 if(is.null(method) || is.na(method)){ stop("Please provide the batch correction method the input file comes from") }
+
+# read input files
+dataset <- readRDS(opt$input_object)
+features <- as.character(read.csv(opt$input_features, row.names =1, header = T)$x)
+# subset input object by features
+dataset <- dataset[features, ]
 
 ## EXECUTE ##
 # Case 1: for graph correcting methods (BBKNN)
