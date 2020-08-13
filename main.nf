@@ -388,7 +388,7 @@ process conv_h5ad2sce {
 	}
 
 // Only Scanorama method can be clustered by SC3
-SCANORAMA_CLUST_SC3  = PY_METHODS_CLUST_SC3.filter{ it[2] == "scanorama" }
+SCANORAMA_CLUST_SC3  = PY_METHODS_CLUST_SC3.filter{ it[1] == "scanorama" }
 
 // Conv_2. Convert SEURAT object to SCE
 process conv_seurat2sce {
@@ -497,8 +497,8 @@ process entropy {
 	}
 }
 
-//Merge all input channels to SC3 clustering
-LOGCOUNTS_CLUST_SC3.mix(LIMMA_CLUST_SC3, COMBAT_CLUST_SC3, MNNCORRECT_CLUST_SC3, SCANORAMA_CLUST_SC3, SEURAT_CLUST_SC3).combine(CLUST_SC3_FEATURES, by: 0).set{ CLUST_SC3}
+//Merge all input channels to SC3 clustering, and RaceID clustering
+LOGCOUNTS_CLUST_SC3.mix(LIMMA_CLUST_SC3, COMBAT_CLUST_SC3, MNNCORRECT_CLUST_SC3, SCANORAMA_CLUST_SC3, SEURAT_CLUST_SC3).combine(CLUST_SC3_FEATURES, by: 0).into{ CLUST_SC3; CLUST_RACEID}
 
 // run SC3 clustering
 if(params.clust_SC3.run == "True"){
@@ -524,8 +524,8 @@ process clust_SC3{
 		--method ${method}\
 		--celltype_key ${params.celltype_key}\
 		--biology ${params.clust_SC3.biology}\
-		--output_clusters SC3_clusters-${method}-features_${prop_genes}-${datasetname}.csv\
-		--output_rowdata SC3_biology-${method}-features_${prop_genes}-${datasetname}.csv 
+		--output_clusters SC3_clusters-${method}-${prop_genes}-${datasetname}.csv\
+		--output_rowdata SC3_biology-${method}-${prop_genes}-${datasetname}.csv 
     	"""
 	}
 }
@@ -559,7 +559,7 @@ process clust_Seurat{
 		--celltype_key ${params.celltype_key}\
 		--n_pcs ${params.clust_seurat.n_pcs}\
 		--k_num ${params.clust_seurat.k_num}\
-		--output_clusters louvain_leiden_clusters-${method}-features_${prop_genes}-${datasetname}.csv 
+		--output_clusters louvain_leiden_clusters-${method}-${prop_genes}-${datasetname}.csv 
     	"""
 	}
 }
@@ -587,9 +587,34 @@ process clust_hierarch {
 		--corrected_assay ${params.corrected_assay}\
 		--method ${method}\
 		--corrected_emb ${params.corrected_emb}\
-		--output_clusters hierarch_clusters-${method}-features_${prop_genes}-${datasetname}.csv 
+		--output_clusters hierarch_clusters-${method}-${prop_genes}-${datasetname}.csv 
     	"""
 
+	}
+}
+
+// run RaceID clustering
+if(params.clust_RaceID.run == "True"){
+process clust_RaceID{
+    	publishDir "${params.output_dir}/${datasetname}/Clustering/RaceID_Clust", mode: 'copy' 
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	memory = { 10.GB + 20.GB * (task.attempt - 1) }
+    	tag "RaceID Clust $method $datasetname $features"
+
+    	input:
+    	set val(datasetname), val(method), val(space_corrected), file(datain), val(prop_genes), file(features) from CLUST_RACEID 
+	
+    	output:
+    	file('*.csv')
+    	
+	"""
+    	clust_RaceID.R\
+		--input_object ${datain}\
+		--input_features ${features}\
+		--corrected_assay ${params.corrected_assay}\
+		--dist_metric ${params.clust_RaceID.dist_metric}\
+		--output_clusters RaceID_clusters-${method}-${prop_genes}-${datasetname}.csv 
+    	"""
 	}
 }
 // Merge all Seurat FindMarkers input channel 
