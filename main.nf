@@ -80,7 +80,7 @@ process subset_genes_by_cv {
 	set val(datasetname), file(datain), val(prop_genes) from SUBSET_FEATURES_CV
 	
 	output:
-	set val(datasetname), val(prop_genes), file("features_*.csv") into CLUST_SC3_FEATURES, CLUST_SEURAT_FEATURES, CLUST_HIERARCH_FEATURES
+	set val(datasetname), val(prop_genes), file("features_*.csv") into CLUST_SC3_FEATURES, CLUST_SEURAT_FEATURES, CLUST_HIERARCH_FEATURES, CONSIDER_ALL_FEATURES
 	"""
 	subset_genes_by_cv.R\
 		--input_object ${datain}\
@@ -90,8 +90,11 @@ process subset_genes_by_cv {
 	"""
 }
 
+// Create channel with a single csv file containing all features - For methods which gene space cannot be subsetted
+ALL_FEATURES = CONSIDER_ALL_FEATURES.filter{ it[1] == 1 } 
+
 // Conv_1. Convert Sce objects to H5ad for the python tools
-process h5ad2sce {
+process conv_sce2h5ad {
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
 	memory = { 2.GB + 10.GB * (task.attempt - 1) }
 	tag "h5ad2sce $datasetname"
@@ -183,7 +186,7 @@ process Harmony {
 	set val(datasetname), file(datain) from HARMONY_METHOD
 	
 	output:
-	set val(datasetname), val('harmony'), val('embedding'), file('harmony.*.rds') into HARMONY_ENTROPY, HARMONY_UMAP, HARMONY_2SEURAT, HARMONY_2H5AD
+	set val(datasetname), val('harmony'), val('embedding'), file('harmony.*.rds') into HARMONY_ENTROPY, HARMONY_UMAP, HARMONY_CLUST, HARMONY_2SEURAT, HARMONY_2H5AD
 	
 	"""
 	harmony_method.R\
@@ -198,6 +201,7 @@ process Harmony {
 } else {
 	HARMONY_ENTROPY = Channel.empty()
 	HARMONY_UMAP = Channel.empty()
+	HARMONY_CLUST = Channel.empty()
 	HARMONY_2SEURAT = Channel.empty()
 	HARMONY_2H5AD = Channel.empty()
 }
@@ -345,7 +349,7 @@ process fastMNN{
     	set val(datasetname), file(datain) from FASTMNN_METHOD
     	
 	output:
-    	set val(datasetname), val('fastMNN'), val('embedding'), file('fastMNN.*.rds') into FASTMNN_ENTROPY, FASTMNN_UMAP, FASTMNN_2H5AD, FASTMNN_2SEURAT 
+    	set val(datasetname), val('fastMNN'), val('embedding'), file('fastMNN.*.rds') into FASTMNN_ENTROPY, FASTMNN_UMAP, FASTMNN_CLUST, FASTMNN_2H5AD, FASTMNN_2SEURAT 
     	
     	"""
     	fastMNN_method.R\
@@ -362,6 +366,7 @@ process fastMNN{
 } else {
 	FASTMNN_ENTROPY = Channel.empty()
 	FASTMNN_UMAP = Channel.empty()
+	FASTMNN_CLUST = Channel.empty()
 	FASTMNN_2H5AD = Channel.empty()
 	FASTMNN_2SEURAT = Channel.empty()
 }
@@ -414,14 +419,14 @@ process conv_seurat2sce {
 // Conv_3. Convert H5AD object to SEURAT
 process conv_h5ad2seurat{
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt - 1) }
+	memory = { 2.GB + 20.GB * (task.attempt - 1) }
 	tag "h5ad2seurat $method $datasetname"
      	
 	input:
      	set val(datasetname), val(method), val(space_corrected), file(datain) from PY_TOOLS_2SEURAT 
      	
 	output:
-     	set val(datasetname), val(method), val(space_corrected), file('*.rds') into PY_METHODS_CLUST_SEURAT, PY_METHODS_MARKERS 
+    	set val(datasetname), val(method), val(space_corrected), file('*.rds') into SCANORAMA_CLUST_SEU, BBKNN_CLUST_SEU, PY_METHODS_MARKERS 
 	"""
 	convert_h5ad2seurat.R\
 		--input ${datain}\
@@ -431,9 +436,12 @@ process conv_h5ad2seurat{
 	""" 
 	}
 
+// separate scanorama anb BBKNN channels as one will be combined with features and second not
+SCANORAMA_CLUST_SEURAT = SCANORAMA_CLUST_SEU.filter{ it[1] == "scanorama" }
+BBKNN_CLUST_SEURAT = BBKNN_CLUST_SEU.filter{ it[1] == "bbknn" }
 
 // Only Scanorama method can be used to compute marker genes 
-SCANORAMA_MARKERS  = PY_METHODS_MARKERS.filter{ it[2] == "scanorama" }
+SCANORAMA_MARKERS  = PY_METHODS_MARKERS.filter{ it[1] == "scanorama" }
 
 //Merge SCE object channels to convert to Seurat
 LOGCOUNTS_2SEURAT.mix(HARMONY_2SEURAT, LIMMA_2SEURAT, COMBAT_2SEURAT, MNNCORRECT_2SEURAT, FASTMNN_2SEURAT).set{CONV_SCE2SEURAT}
@@ -441,7 +449,7 @@ LOGCOUNTS_2SEURAT.mix(HARMONY_2SEURAT, LIMMA_2SEURAT, COMBAT_2SEURAT, MNNCORRECT
 //Conv_4. Convert SCE to Seurat 
 process conv_sce2seurat{
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt - 1) }
+	memory = { 2.GB + 20.GB * (task.attempt - 1) }
 	tag "sce2seurat $method $datasetname"
      	
 	input:
@@ -458,12 +466,18 @@ process conv_sce2seurat{
 		--output_object seurat_obj.${method}.${datasetname}.rds
 	""" 
 	}
+// separate SCE_CLUST_SEURAT channel into counts-mat and low-d methods
+SCE_CLUST_SEURAT.into{ SCE_CLUST_SEURAT_1; SCE_CLUST_SEURAT_2 }
+SCE_COUNTS_MAT_CLUST_SEURAT = SCE_CLUST_SEURAT_1.filter{ it[1] != "harmony" || it[1] != "fastMNN" } 
+LOW_D_CLUST_SEURAT = SCE_CLUST_SEURAT_2.filter{ it[1] == "harmony" || it[1] == "fastMNN" } 
+
+// combine with features
 
 // filter out Harmony and fastMNN (low-D embedding) from MARKERS Channel
-SCE_MARKERS_FILT  = SCE_MARKERS.filter{ it[2] != "harmony" || it[2] != "fastMNN" }
+SCE_MARKERS_FILT  = SCE_MARKERS.filter{ it[1] != "harmony" || it[1] != "fastMNN" }
 
 // Merge input channels for entropy
-LOGCOUNTS_ENTROPY.mix(HARMONY_ENTROPY, LIMMA_ENTROPY, COMBAT_ENTROPY, MNNCORRECT_ENTROPY, FASTMNN_ENTROPY, PY_METHODS_ENTROPY,  SEURAT_ENTROPY).into{ENTROPY; CLUST_HIERARCH_NO_FEATURES}
+LOGCOUNTS_ENTROPY.mix(HARMONY_ENTROPY, LIMMA_ENTROPY, COMBAT_ENTROPY, MNNCORRECT_ENTROPY, FASTMNN_ENTROPY, PY_METHODS_ENTROPY, SEURAT_ENTROPY).into{ENTROPY; CLUST_HIERARCH_NO_FEATURES}
 
 // compute entropy 
 if(params.entropy.run == "True"){
@@ -504,9 +518,9 @@ LOGCOUNTS_CLUST_SC3.mix(LIMMA_CLUST_SC3, COMBAT_CLUST_SC3, MNNCORRECT_CLUST_SC3,
 if(params.clust_SC3.run == "True"){
 
 process clust_SC3{
-    	publishDir "${params.output_dir}/${datasetname}/Clustering/SC3_Clust", mode: 'copy' 
+ 	publishDir "${params.output_dir}/${datasetname}/SC3_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt - 1) }
+	memory = { 10.GB + 10.GB * (task.attempt - 1) }
     	tag "SC3 Clust $method $datasetname $features"
 
     	input:
@@ -531,15 +545,23 @@ process clust_SC3{
 }
 
 
-//Merge all Seurat clustering input channels
-SEURAT3_CLUST_SEURAT.mix(PY_METHODS_CLUST_SEURAT, SCE_CLUST_SEURAT).combine(CLUST_SEURAT_FEATURES, by: 0).set{ CLUST_SEURAT }
+
+// Arrange Seurat_clust channels - Count matrix methods can be feature subsetted, rest cannot
+//// Methods correcting counts matrices
+COUNTS_MAT_CLUST_SEURAT = SEURAT3_CLUST_SEURAT.mix(SCANORAMA_CLUST_SEURAT, SCE_COUNTS_MAT_CLUST_SEURAT).combine(CLUST_SEURAT_FEATURES, by: 0)
+
+//// Other methods (low-d embedding and graph )
+LOW_D_CLUST_SEURAT.mix(BBKNN_CLUST_SEURAT).combine(ALL_FEATURES, by: 0).set { REST_CLUST_SEURAT }
+
+//// Mix channels
+CLUST_SEURAT = COUNTS_MAT_CLUST_SEURAT.mix( REST_CLUST_SEURAT )
 
 // run Seurat clustering
 if(params.clust_seurat.run == "True"){
 process clust_Seurat{
     	publishDir "${params.output_dir}/${datasetname}/Clustering/Seurat_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt - 1) }
+	memory = { 2.GB + 20.GB * (task.attempt - 1) }
     	tag "Seurat Clust $method $datasetname $features"
 
     	input:
@@ -564,13 +586,23 @@ process clust_Seurat{
 	}
 }
 
+// Arrange Clust_hierarch channels - Count matrix methods can be feature subsetted, rest cannot
+//// Methods correcting counts matrices
+CLUST_HIERARCH_NO_FEATURES.into {CLUST_HIERARCH_NO_FEATURES_1; CLUST_HIERARCH_NO_FEATURES_2 }
+COUNTS_MAT_CLUST_HIERARCH = CLUST_HIERARCH_NO_FEATURES_1.filter { it[1] != "fastMNN" || it[1] != "harmony" || it[1] != "bbknn" }.combine(CLUST_HIERARCH_FEATURES, by: 0)
+
+//// Other methods (low-d embedding and graph )
+REST_CLUST_HIERARCH = CLUST_HIERARCH_NO_FEATURES_2.filter { it[1] == "fastMNN" || it[1] == "harmony" || it[1] == "bbknn" }.combine(ALL_FEATURES, by: 0)
+
+//// Mix channels
+CLUST_HIERARCH = COUNTS_MAT_CLUST_HIERARCH.mix(REST_CLUST_HIERARCH)
+
 // run hierarchical clustering
 if(params.clust_hierarch.run == "True"){
-CLUST_HIERARCH = CLUST_HIERARCH_NO_FEATURES.combine(CLUST_HIERARCH_FEATURES, by: 0)
 process clust_hierarch {
     	publishDir "${params.output_dir}/${datasetname}/Clustering/Hierarch_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
-	memory = { 5.GB + 20.GB * (task.attempt - 1) }
+	memory = { 2.GB + 20.GB * (task.attempt - 1) }
     	tag "Hierarch Clust $method $datasetname $features"
 
     	input:
@@ -598,7 +630,7 @@ if(params.clust_RaceID.run == "True"){
 process clust_RaceID{
     	publishDir "${params.output_dir}/${datasetname}/Clustering/RaceID_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt - 1) }
+	memory = { 2.GB + 20.GB * (task.attempt - 1) }
     	tag "RaceID Clust $method $datasetname $features"
 
     	input:
@@ -625,7 +657,7 @@ if(params.find_markers.run == "True"){
 process find_markers{
     	publishDir "${params.output_dir}/${datasetname}/Markers", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt - 1) }
+	memory = { 2.GB + 20.GB * (task.attempt - 1) }
     	tag "Markers $method $datasetname"
 
     	input:
@@ -654,7 +686,7 @@ if(params.UMAP.run == "True"){
 // Conv_5 Convert RDS (SCE and Seurat) to H5ad objects to compute UMAP only in Python
 process conv_rds2h5ad {
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt - 1) }
+	memory = { 2.GB + 20.GB * (task.attempt - 1) }
     	tag "conv_rds2h5ad $method $datasetname"
     	label "fast_running"
     	
@@ -680,7 +712,7 @@ BBKNN_UMAP.mix(SCANORAMA_UMAP, R_TOOLS_UMAP).set{ ALL_UMAP }
 process UMAP {
     	publishDir "${params.output_dir}/${datasetname}/UMAP" , mode: 'copy', pattern: '*.csv' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt - 1) }
+	memory = { 2.GB + 20.GB * (task.attempt - 1) }
     	tag "UMAP $method $datasetname"
     	
 	input:

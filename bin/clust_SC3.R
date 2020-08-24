@@ -79,7 +79,7 @@ suppressPackageStartupMessages(require(SC3))
 # FUNCTIONS #
 # build custom SCE object
 exp_sce <- function(dataset, assay_name){
-  counts_mat <- assay(dataset, assay_name)
+  counts_mat <- as.matrix(assay(dataset, assay_name))
   col_data <- dataset@colData
   sce <- SingleCellExperiment(assays = list(logcounts = counts_mat),
                               colData = col_data)
@@ -108,6 +108,9 @@ assay_name <- opt$assay_name
 corrected_assay <- opt$corrected_assay
 method <- opt$method
 if(is.null(method) || is.na(method)){ stop("Please provide the batch correction method the input file comes from") }
+# consider only valid methods
+if(!(method %in% c("logcounts", "Logcounts", "mnnCorrect", "mnncorrect", "limma", "Limma", "ComBat", "combat", "Seurat3", "seurat3", "Scanorama", "scanorama"))){
+  stop("Only batch correction methods correcting counts matrix can be clustered by SC3") }
 celltype_key <- opt$celltype_key
 biology <- opt$biology
 

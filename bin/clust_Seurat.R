@@ -126,8 +126,6 @@ if(is.null(method) || is.na(method)){ stop("Please provide the batch correction 
 # read input files
 dataset <- readRDS(opt$input_object)
 features <- as.character(read.csv(opt$input_features, row.names =1, header = T)$x)
-# subset input object by features
-dataset <- dataset[features, ]
 
 ## EXECUTE ##
 # Case 1: for graph correcting methods (BBKNN)
@@ -180,6 +178,9 @@ if (method %in% c("fastMNN", "FastMNN", "Harmony", "harmony")){
 if (method %in% c("logcounts", "Logcounts", "mnnCorrect", "mnncorrect", "limma", "Limma", "ComBat", "combat", "Scanorama", "scanorama")){
   # logcounts
   if(method %in% c("logcounts", "Logcounts")){assay_name <- assay_name }else{ assay_name <- corrected_assay }
+  # subset input object by features
+  dataset <- dataset[features, ]
+  
   all.genes <- rownames(dataset)
   # scale data
   dataset <- scale_data(dataset, assay_name = assay_name, use_genes = all.genes)
