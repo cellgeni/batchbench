@@ -1,3 +1,3 @@
-FROM quay.io/cellgeni/batchbench:v0.26 
-# Install other CRAN
-RUN Rscript -e 'install.packages(c("RaceID"), dependencies = TRUE)'
+FROM quay.io/cellgeni/batchbench:v0.27
+#Install SC3 via GitHub to solve issues
+devtools::install_github("hemberg-lab/SC3") 

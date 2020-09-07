@@ -13,5 +13,5 @@ $HOME/bin/nextflow run "${source_dir}/main.nf"\
         -with-report "${report_dir}/report.html"\
         -with-trace "${report_dir}/trace.txt"\
         -with-timeline "${report_dir}/timeline.html"\
-        -with-dag "${report_dir}/flowchart.png"\
+        #-with-dag "${report_dir}/flowchart.png"\
         -resume

@@ -20,11 +20,25 @@ option_list = list(
     help = 'Features names subsetted by coefficient of variation'
   ),
   make_option(
+    c("-a", "--assay_name"),
+    action = "store",
+    default = "logcounts",
+    type = 'character',
+    help = 'Counts assay to add to the h5ad object'
+  ),
+  make_option(
     c("-c", "--corrected_assay"),
     action = "store",
     default = "corrected",
     type = 'character',
     help = 'Corrected counts assay name'
+  ),
+  make_option(
+    c("-m", "--method"),
+    action = "store",
+    default = NA,
+    type = 'character',
+    help = 'Bacth correction method the input comes from'
   ),
   make_option(
     c("-d", "--dist_metric"),
@@ -46,6 +60,8 @@ opt <- parse_args(OptionParser(option_list=option_list))
 
 
 # args
+method <- opt$method
+assay_name <- opt$assay_name
 corrected_assay <- opt$corrected_assay
 dist_metric <- opt$dist_metric
 
@@ -59,7 +75,11 @@ features <- as.character(read.csv(opt$input_features, row.names =1, header = T)$
 dataset <- dataset[features, ]
 
 # 1. Coerce corrected matrix to 'dgCMatrix' class
-mat <- as(assay(dataset, corrected_assay), "dgCMatrix")
+if( method %in% c("logcounts")){ 
+	mat <- as(assay(dataset, assay_name), "dgCMatrix")
+	}else{
+	mat <- as(assay(dataset, corrected_assay), "dgCMatrix")
+	}
 # 2. Build RaceID object
 ## 2.1 Remove negative count values (** Should we scale values to zero-minimum instead of removing negative ones?)
 mat [mat < 0] <- 0

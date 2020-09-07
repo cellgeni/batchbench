@@ -31,6 +31,13 @@ option_list = list (
         type = 'character',
         help = 'Name of the fastMNN corrected low-dimensional embedding.'
     ),
+  make_option(
+    c("-m", "--method"),
+    action = "store",
+    default = NA,
+    type = 'character',
+    help = 'Batch correction method the object comes from'
+  ),
     make_option(
         c("-o", "--output_object"),
         action = "store",
@@ -42,7 +49,6 @@ option_list = list (
 
 opt <- parse_args(OptionParser(option_list=option_list))
 
-#suppressPackageStartupMessages(library(reticulate)) 
 suppressPackageStartupMessages(library(SingleCellExperiment)) 
 suppressPackageStartupMessages(library(loomR))
 suppressPackageStartupMessages(library(sceasy))
@@ -51,15 +57,16 @@ suppressPackageStartupMessages(library(sceasy))
 assay_name <- opt$assay_name
 corrected_assay <- opt$corrected_assay
 corrected_emb <- opt$corrected_emb
+method <- opt$method
 # read input file
 dataset <- readRDS(opt$input_object)
 
 if (class(dataset) == "SingleCellExperiment"){
-  #Those methods that return an embedding, don't have corrected as an assay
-  if(corrected_emb %in% reducedDimNames(dataset)){
+  # Those methods that return an embedding or the uncorrected object,  don't have corrected as an assay
+  if( corrected_emb %in% reducedDimNames(dataset) || method %in% c("logcounts") ){
   sceasy:::sce2anndata(obj = dataset, outFile = opt$output_object, main_layer = assay_name, transfer_layers = NULL)
   }
-  #Methods that correct the expression matrix, do have corrected as an assay
+  # Methods that correct the expression matrix, do have corrected as an assay
   else {
   sceasy:::sce2anndata(obj = dataset, outFile = opt$output_object, main_layer = corrected_assay, transfer_layers = NULL)
   }

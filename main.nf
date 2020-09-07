@@ -12,7 +12,8 @@ Channel.fromPath(params.dataset_list)
 
 // fetch data
 process get_datasets {
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	MAX = 4
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 2.GB + 10.GB * (task.attempt - 1) }
  	tag "$datasetname"
 
@@ -39,9 +40,10 @@ process get_datasets {
 // preform QC based on min_genes expressed per cell, min_cells with expression per gene, remove batch and cell types representing less than bt_thres and ct_thres proportion of totalcells 
 if(params.QC_rds.run == "True"){
 process QC_rds{
+	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}", mode: 'copy', pattern: "*.txt" 
     	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy', pattern: "*.rds" 
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 10.GB + 10.GB * (task.attempt - 1) }
 	tag "QC $datasetname"
 
@@ -71,8 +73,9 @@ SUBSET_FEATURES_CV = SUBSET_FEATURES.combine(PROP_GENES)
 
 // subset genes by their coeficient of variation according to gene proportions
 process subset_genes_by_cv {
+	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Subset_features", mode: 'copy' 
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 2.GB + 10.GB * (task.attempt - 1) }
 	tag "$datasetname subset $prop_genes genes by coeff. variation"
 	
@@ -95,7 +98,8 @@ ALL_FEATURES = CONSIDER_ALL_FEATURES.filter{ it[1] == 1 }
 
 // Conv_1. Convert Sce objects to H5ad for the python tools
 process conv_sce2h5ad {
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	MAX = 4
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 2.GB + 10.GB * (task.attempt - 1) }
 	tag "h5ad2sce $datasetname"
 	
@@ -108,17 +112,18 @@ process conv_sce2h5ad {
 	"""
 	export NUMBA_CACHE_DIR=~/NUMBA_CACHE
 	convert_sce2h5ad.R\
-		 --input ${datain}\
+		 --input_object ${datain}\
 		 --assay_name ${params.assay_name}\
-		 --output QC.${datasetname}.h5ad
+		 --output_object QC.${datasetname}.h5ad
 	""" 	
 }
 
 // run BBKNN method
 if(params.BBKNN.run == "True"){
 process BBKNN {
+	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
         tag "BBKNN $datasetname"
         
@@ -146,8 +151,9 @@ process BBKNN {
 // run Scanorama method
 if(params.scanorama.run == "True"){
 process Scanorama {
+	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
      	tag "Scanorama $datasetname"
      	
@@ -177,8 +183,9 @@ PY_TOOLS_2SCE = BBKNN_2SCE.mix(SCANORAMA_2SCE)
 // run Harmony method
 if(params.harmony.run == "True"){
 process Harmony {
+	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
 	tag "Harmony $datasetname"
 	
@@ -209,8 +216,9 @@ process Harmony {
 // run Limma method
 if(params.Limma.run == "True"){
 process Limma {
+	MAX = 4
 	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "Limma $datasetname"
     	
@@ -239,8 +247,9 @@ process Limma {
 // run ComBat method
 if(params.Combat.run == "True"){
 process Combat{
+	MAX = 4
 	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "Combat $datasetname"
     	
@@ -269,8 +278,9 @@ process Combat{
 // run Seurat 3 method
 if(params.Seurat_3.run == "True"){
 process Seurat_3{
+	MAX = 4
  	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "Seurat 3 $datasetname"
     	
@@ -304,8 +314,9 @@ process Seurat_3{
 // run mnnCorrect method
 if(params.mnnCorrect.run == "True"){
 process mnnCorrect{
+	MAX = 4
 	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "mnnCorrect $datasetname"
     	label "long_running"
@@ -340,8 +351,9 @@ process mnnCorrect{
 // run fastMNN method
 if(params.fastMNN.run == "True"){
 process fastMNN{
+	MAX = 4
  	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "fastMNNt $datasetname"
     	
@@ -373,7 +385,8 @@ process fastMNN{
 
 // Conv_1. Convert H5AD objects to SCE 
 process conv_h5ad2sce {
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	MAX = 4
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 2.GB + 10.GB * (task.attempt - 1) }
 	tag "sce2h5ad $method $datasetname"
 	
@@ -397,7 +410,8 @@ SCANORAMA_CLUST_SC3  = PY_METHODS_CLUST_SC3.filter{ it[1] == "scanorama" }
 
 // Conv_2. Convert SEURAT object to SCE
 process conv_seurat2sce {
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	MAX = 4
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 2.GB + 10.GB * (task.attempt - 1) }
 	tag "seurat2sce $method $datasetname"
 	
@@ -418,7 +432,8 @@ process conv_seurat2sce {
 
 // Conv_3. Convert H5AD object to SEURAT
 process conv_h5ad2seurat{
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	MAX = 4
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 2.GB + 20.GB * (task.attempt - 1) }
 	tag "h5ad2seurat $method $datasetname"
      	
@@ -448,7 +463,8 @@ LOGCOUNTS_2SEURAT.mix(HARMONY_2SEURAT, LIMMA_2SEURAT, COMBAT_2SEURAT, MNNCORRECT
 
 //Conv_4. Convert SCE to Seurat 
 process conv_sce2seurat{
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	MAX = 4
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 2.GB + 20.GB * (task.attempt - 1) }
 	tag "sce2seurat $method $datasetname"
      	
@@ -484,8 +500,9 @@ if(params.entropy.run == "True"){
 
 // calculate Shannon entropy 
 process entropy {
+	MAX = 4
  	publishDir "${params.output_dir}/${datasetname}/entropy", mode: 'copy' 
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 2.GB + 10.GB * (task.attempt - 1) }
 	tag "compute entropy $datain"
 	
@@ -518,9 +535,10 @@ LOGCOUNTS_CLUST_SC3.mix(LIMMA_CLUST_SC3, COMBAT_CLUST_SC3, MNNCORRECT_CLUST_SC3,
 if(params.clust_SC3.run == "True"){
 
 process clust_SC3{
- 	publishDir "${params.output_dir}/${datasetname}/SC3_Clust", mode: 'copy' 
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
-	memory = { 10.GB + 10.GB * (task.attempt - 1) }
+	MAX = 4
+ 	publishDir "${params.output_dir}/${datasetname}/Clustering/SC3_Clust", mode: 'copy' 
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
+	memory = { 20.GB + 20.GB * (task.attempt - 1) }
     	tag "SC3 Clust $method $datasetname $features"
 
     	input:
@@ -560,7 +578,7 @@ CLUST_SEURAT = COUNTS_MAT_CLUST_SEURAT.mix( REST_CLUST_SEURAT )
 if(params.clust_seurat.run == "True"){
 process clust_Seurat{
     	publishDir "${params.output_dir}/${datasetname}/Clustering/Seurat_Clust", mode: 'copy' 
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 2.GB + 20.GB * (task.attempt - 1) }
     	tag "Seurat Clust $method $datasetname $features"
 
@@ -581,7 +599,7 @@ process clust_Seurat{
 		--celltype_key ${params.celltype_key}\
 		--n_pcs ${params.clust_seurat.n_pcs}\
 		--k_num ${params.clust_seurat.k_num}\
-		--output_clusters louvain_leiden_clusters-${method}-${prop_genes}-${datasetname}.csv 
+		--output_clusters louvain_leiden_clusters-${method}-${prop_genes}-${datasetname}.csv
     	"""
 	}
 }
@@ -600,8 +618,9 @@ CLUST_HIERARCH = COUNTS_MAT_CLUST_HIERARCH.mix(REST_CLUST_HIERARCH)
 // run hierarchical clustering
 if(params.clust_hierarch.run == "True"){
 process clust_hierarch {
+	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Clustering/Hierarch_Clust", mode: 'copy' 
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 2.GB + 20.GB * (task.attempt - 1) }
     	tag "Hierarch Clust $method $datasetname $features"
 
@@ -619,7 +638,7 @@ process clust_hierarch {
 		--corrected_assay ${params.corrected_assay}\
 		--method ${method}\
 		--corrected_emb ${params.corrected_emb}\
-		--output_clusters hierarch_clusters-${method}-${prop_genes}-${datasetname}.csv 
+		--output_clusters hierarch_clusters-${method}-${prop_genes}-${datasetname}.csv
     	"""
 
 	}
@@ -628,8 +647,9 @@ process clust_hierarch {
 // run RaceID clustering
 if(params.clust_RaceID.run == "True"){
 process clust_RaceID{
+	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Clustering/RaceID_Clust", mode: 'copy' 
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 2.GB + 20.GB * (task.attempt - 1) }
     	tag "RaceID Clust $method $datasetname $features"
 
@@ -643,9 +663,11 @@ process clust_RaceID{
     	clust_RaceID.R\
 		--input_object ${datain}\
 		--input_features ${features}\
+		--assay_name ${params.assay_name}\
 		--corrected_assay ${params.corrected_assay}\
+		--method ${method}\
 		--dist_metric ${params.clust_RaceID.dist_metric}\
-		--output_clusters RaceID_clusters-${method}-${prop_genes}-${datasetname}.csv 
+		--output_clusters RaceID_clusters-${method}-${prop_genes}-${datasetname}.csv
     	"""
 	}
 }
@@ -655,8 +677,9 @@ SEURAT3_MARKERS.mix(SCANORAMA_MARKERS, SCE_MARKERS_FILT).set{ MARKERS }
 // run marker genes
 if(params.find_markers.run == "True"){
 process find_markers{
+	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Markers", mode: 'copy' 
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 2.GB + 20.GB * (task.attempt - 1) }
     	tag "Markers $method $datasetname"
 
@@ -671,7 +694,7 @@ process find_markers{
 		--assay_name ${params.assay_name}\
 		--corrected_assay ${params.corrected_assay}\
 		--celltype_key ${params.celltype_key}\
-		--output_markers markers_${method}.${datasetname}.csv 
+		--output_markers markers_${method}.${datasetname}.csv
 	
     	"""
 	}
@@ -685,7 +708,8 @@ LOGCOUNTS_UMAP.mix(HARMONY_UMAP, LIMMA_UMAP, COMBAT_UMAP, SEURAT_UMAP, MNNCORREC
 if(params.UMAP.run == "True"){
 // Conv_5 Convert RDS (SCE and Seurat) to H5ad objects to compute UMAP only in Python
 process conv_rds2h5ad {
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	MAX = 4
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 2.GB + 20.GB * (task.attempt - 1) }
     	tag "conv_rds2h5ad $method $datasetname"
     	label "fast_running"
@@ -702,6 +726,7 @@ process conv_rds2h5ad {
 		 --assay_name ${params.assay_name}\
 		 --corrected_assay ${params.corrected_assay}\
 		 --corrected_emb ${params.corrected_emb}\
+		 --method ${method}\
 		 --output ${method}.${datasetname}.h5ad
     	"""
 }
@@ -710,8 +735,9 @@ process conv_rds2h5ad {
 BBKNN_UMAP.mix(SCANORAMA_UMAP, R_TOOLS_UMAP).set{ ALL_UMAP }
 
 process UMAP {
+	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/UMAP" , mode: 'copy', pattern: '*.csv' 
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= process.maxRetries ? 'retry' : 'ignore' }
+	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 2.GB + 20.GB * (task.attempt - 1) }
     	tag "UMAP $method $datasetname"
     	
@@ -726,7 +752,7 @@ process UMAP {
 		--input_object ${datain}\
 		--n_neighbours ${params.UMAP.n_neighbours}\
 		--n_pcs ${params.UMAP.n_pcs}\
-		--output_umap umap.${method}.${datasetname}.csv  
+		--output_umap umap.${method}.${datasetname}.csv
     	"""
 	}
 }

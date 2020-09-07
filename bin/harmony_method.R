@@ -57,7 +57,7 @@ option_list = list(
 opt <- parse_args(OptionParser(option_list=option_list))
 
 suppressPackageStartupMessages(require(scater))
-suppressPackageStartupMessages(require(SingleCellExperiment))
+#suppressPackageStartupMessages(require(SingleCellExperiment))
 suppressPackageStartupMessages(require(harmony))
 # args
 assay_name <- opt$assay_name
