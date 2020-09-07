@@ -57,7 +57,6 @@ option_list = list(
 opt <- parse_args(OptionParser(option_list=option_list))
 
 suppressPackageStartupMessages(require(scater))
-#suppressPackageStartupMessages(require(SingleCellExperiment))
 suppressPackageStartupMessages(require(harmony))
 # args
 assay_name <- opt$assay_name
@@ -68,15 +67,14 @@ theta <- opt$theta
 
 # read input object
 dataset <- readRDS(opt$input_object)
-# run PCA
-dataset <- runPCA(dataset, exprs_values = assay_name, ncomponents = n_pcs)
-pca <- dataset@reducedDims@listData[["PCA"]]
 # cell batch label vector
 batch_vector <- as.character(dataset[[batch_key]])
 # run Harmony
-dataset@reducedDims@listData[[corrected_emb]] <- HarmonyMatrix(data_mat=pca, meta_data=colData(dataset), vars_use = batch_key, theta=theta, do_pca = F)
+harmony_emb <- HarmonyMatrix(data_mat=as.matrix(assay(dataset, assay_name)), meta_data=colData(dataset), vars_use = batch_key, theta=theta, do_pca = TRUE)
 # Add rownames to corrected embedding 
-rownames(dataset@reducedDims@listData[[corrected_emb]]) <- colnames(dataset)
+rownames(harmony_emb) <- colnames(dataset)
+# attach corrected embedding
+reducedDim(dataset, corrected_emb) <- harmony_emb
 # save object with corrected embedding
 saveRDS(dataset, opt$output_object)
 print("Harmony worked!")

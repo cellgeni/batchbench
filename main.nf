@@ -304,9 +304,8 @@ process Seurat_3{
     	"""
 	}
 } else {
-	SEURAT_ENTROPY = Channel.empty()
 	SEURAT3_2H5AD = Channel.empty()
-	SEURAT_2SCE = Channel.empty()
+	SEURAT3_2SCE = Channel.empty()
 	SEURAT3_CLUST_SEURAT = Channel.empty()
 	SEURAT3_MARKERS = Channel.empty()
 }
