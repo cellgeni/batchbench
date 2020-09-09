@@ -83,7 +83,7 @@ process subset_genes_by_cv {
 	set val(datasetname), file(datain), val(prop_genes) from SUBSET_FEATURES_CV
 	
 	output:
-	set val(datasetname), val(prop_genes), file("features_*.csv") into CLUST_SC3_FEATURES, CLUST_SEURAT_FEATURES, CLUST_HIERARCH_FEATURES, CONSIDER_ALL_FEATURES
+	set val(datasetname), val(prop_genes), file("features_*.csv") into FEATURES 
 	"""
 	subset_genes_by_cv.R\
 		--input_object ${datain}\
@@ -93,8 +93,10 @@ process subset_genes_by_cv {
 	"""
 }
 
+//Duplicate features channel for each of the clustering processes
+FEATURES.into{ CLUST_SC3_FEATURES; CLUST_SEURAT_FEATURES; CLUST_HIERARCH_FEATURES; CONSIDER_ALL_FEATURES}
 // Create channel with a single csv file containing all features - For methods which gene space cannot be subsetted
-ALL_FEATURES = CONSIDER_ALL_FEATURES.filter{ it[1] == 1 } 
+ALL_FEATURES = CONSIDER_ALL_FEATURES.filter{ it[1] == 1 }.first() 
 
 // Conv_1. Convert Sce objects to H5ad for the python tools
 process conv_sce2h5ad {
@@ -481,12 +483,10 @@ process conv_sce2seurat{
 		--output_object seurat_obj.${method}.${datasetname}.rds
 	""" 
 	}
-// separate SCE_CLUST_SEURAT channel into counts-mat and low-d methods
+// separate SCE_CLUST_SEURAT channel into counts-mat and other methods (low-d and graph)
 SCE_CLUST_SEURAT.into{ SCE_CLUST_SEURAT_1; SCE_CLUST_SEURAT_2 }
-SCE_COUNTS_MAT_CLUST_SEURAT = SCE_CLUST_SEURAT_1.filter{ it[1] != "harmony" || it[1] != "fastMNN" } 
-LOW_D_CLUST_SEURAT = SCE_CLUST_SEURAT_2.filter{ it[1] == "harmony" || it[1] == "fastMNN" } 
-
-// combine with features
+SCE_COUNTS_MAT_CLUST_SEURAT = SCE_CLUST_SEURAT_1.filter{ it[2] == "exp_matrix" } 
+LOW_D_CLUST_SEURAT = SCE_CLUST_SEURAT_2.filter{ it[2] == "embedding" } 
 
 // filter out Harmony and fastMNN (low-D embedding) from MARKERS Channel
 SCE_MARKERS_FILT  = SCE_MARKERS.filter{ it[1] != "harmony" || it[1] != "fastMNN" }
@@ -568,17 +568,18 @@ process clust_SC3{
 COUNTS_MAT_CLUST_SEURAT = SEURAT3_CLUST_SEURAT.mix(SCANORAMA_CLUST_SEURAT, SCE_COUNTS_MAT_CLUST_SEURAT).combine(CLUST_SEURAT_FEATURES, by: 0)
 
 //// Other methods (low-d embedding and graph )
-LOW_D_CLUST_SEURAT.mix(BBKNN_CLUST_SEURAT).combine(ALL_FEATURES, by: 0).set { REST_CLUST_SEURAT }
+REST_CLUST_SEURAT = LOW_D_CLUST_SEURAT.mix(BBKNN_CLUST_SEURAT).combine(ALL_FEATURES, by: 0)
 
 //// Mix channels
 CLUST_SEURAT = COUNTS_MAT_CLUST_SEURAT.mix( REST_CLUST_SEURAT )
+
 
 // run Seurat clustering
 if(params.clust_seurat.run == "True"){
 process clust_Seurat{
     	publishDir "${params.output_dir}/${datasetname}/Clustering/Seurat_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 2.GB + 20.GB * (task.attempt - 1) }
+	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "Seurat Clust $method $datasetname $features"
 
     	input:
@@ -606,10 +607,10 @@ process clust_Seurat{
 // Arrange Clust_hierarch channels - Count matrix methods can be feature subsetted, rest cannot
 //// Methods correcting counts matrices
 CLUST_HIERARCH_NO_FEATURES.into {CLUST_HIERARCH_NO_FEATURES_1; CLUST_HIERARCH_NO_FEATURES_2 }
-COUNTS_MAT_CLUST_HIERARCH = CLUST_HIERARCH_NO_FEATURES_1.filter { it[1] != "fastMNN" || it[1] != "harmony" || it[1] != "bbknn" }.combine(CLUST_HIERARCH_FEATURES, by: 0)
+COUNTS_MAT_CLUST_HIERARCH = CLUST_HIERARCH_NO_FEATURES_1.filter { it[2] == "exp_matrix" }.combine(CLUST_HIERARCH_FEATURES, by: 0)
 
 //// Other methods (low-d embedding and graph )
-REST_CLUST_HIERARCH = CLUST_HIERARCH_NO_FEATURES_2.filter { it[1] == "fastMNN" || it[1] == "harmony" || it[1] == "bbknn" }.combine(ALL_FEATURES, by: 0)
+REST_CLUST_HIERARCH = CLUST_HIERARCH_NO_FEATURES_2.filter { it[2] != "exp_matrix" }.combine(ALL_FEATURES, by: 0)
 
 //// Mix channels
 CLUST_HIERARCH = COUNTS_MAT_CLUST_HIERARCH.mix(REST_CLUST_HIERARCH)
@@ -620,7 +621,7 @@ process clust_hierarch {
 	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Clustering/Hierarch_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 2.GB + 20.GB * (task.attempt - 1) }
+	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "Hierarch Clust $method $datasetname $features"
 
     	input:
