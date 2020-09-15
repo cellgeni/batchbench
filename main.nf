@@ -502,7 +502,7 @@ process entropy {
 	MAX = 4
  	publishDir "${params.output_dir}/${datasetname}/entropy", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 2.GB + 10.GB * (task.attempt - 1) }
+	memory = { 10.GB + 10.GB * (task.attempt - 1) }
 	tag "compute entropy $datain"
 	
 	input:
@@ -537,7 +537,7 @@ process clust_SC3{
 	MAX = 4
  	publishDir "${params.output_dir}/${datasetname}/Clustering/SC3_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 20.GB + 20.GB * (task.attempt - 1) }
+	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "SC3 Clust $method $datasetname $features"
 
     	input:
@@ -616,8 +616,8 @@ REST_CLUST_HIERARCH = CLUST_HIERARCH_NO_FEATURES_2.filter { it[2] != "exp_matrix
 CLUST_HIERARCH = COUNTS_MAT_CLUST_HIERARCH.mix(REST_CLUST_HIERARCH)
 
 // run hierarchical clustering
-if(params.clust_hierarch.run == "True"){
-process clust_hierarch {
+if(params.clust_Hierarch.run == "True"){
+process clust_Hierarch {
 	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Clustering/Hierarch_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
@@ -650,7 +650,7 @@ process clust_RaceID{
 	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Clustering/RaceID_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 2.GB + 20.GB * (task.attempt - 1) }
+	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "RaceID Clust $method $datasetname $features"
 
     	input:
@@ -694,7 +694,7 @@ process find_markers{
 		--assay_name ${params.assay_name}\
 		--corrected_assay ${params.corrected_assay}\
 		--celltype_key ${params.celltype_key}\
-		--output_markers markers_${method}.${datasetname}.csv
+		--output_markers seurat_markers.${method}.${datasetname}.csv
 	
     	"""
 	}

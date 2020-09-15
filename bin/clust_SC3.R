@@ -50,7 +50,7 @@ option_list = list(
   make_option(
     c("-b", "--biology"),
     action = "store",
-    default = TRUE,
+    default = FALSE,
     type = 'logical',
     help = 'Wether to calculate biological features based on the identified cell clusters (DE genes, marker genes etc).'
   ),
@@ -100,6 +100,11 @@ run_SC3 <- function(sce, celltype_key, biology){
   print(paste0("k values on clustering:", k_vec))
   # biology = T enables calculation of DE genes, and marker genes
   sce_sc3 <- SC3::sc3(sce, ks = k_vec, gene_filter = FALSE, biology = biology)
+  # Extract annotation of NAs-assigned cells (when dataset > 5000 cells)
+  if(ncol(sce_sc3) >= 5000){
+	  print("Dataset with >= 5000 cells. Running SVM to predict labels of all the other cells.")
+          sce <- sc3_run_svm(sce, ks = k)
+  }
   return(sce_sc3)
 }
 
