@@ -535,7 +535,8 @@ if(params.clust_SC3.run == "True"){
 
 process clust_SC3{
 	MAX = 4
- 	publishDir "${params.output_dir}/${datasetname}/Clustering/SC3_Clust", mode: 'copy' 
+ 	publishDir "${params.output_dir}/${datasetname}/Clustering/SC3_Clust", mode: 'copy', pattern: '*.csv' 
+ 	publishDir "${params.output_dir}/${datasetname}/Clustering/SC3_Clust/SC3_objects", mode: 'copy', pattern: '*.rds' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "SC3 Clust $method $datasetname $features"
@@ -555,6 +556,7 @@ process clust_SC3{
 		--method ${method}\
 		--celltype_key ${params.celltype_key}\
 		--biology ${params.clust_SC3.biology}\
+		--save_SCE SC3_SCE-${method}-${prop_genes}-${datasetname}.rds\
 		--output_clusters SC3_clusters-${method}-${prop_genes}-${datasetname}.csv\
 		--output_rowdata SC3_biology-${method}-${prop_genes}-${datasetname}.csv 
     	"""

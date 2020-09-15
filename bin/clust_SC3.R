@@ -55,6 +55,13 @@ option_list = list(
     help = 'Wether to calculate biological features based on the identified cell clusters (DE genes, marker genes etc).'
   ),
   make_option(
+    c("-s", "--save_SCE"),
+    action = "store",
+    default = NA,
+    type = 'character',
+    help = 'Output path for SC3 SCE object'
+  ),
+  make_option(
     c("-o", "--output_clusters"),
     action = "store",
     default = NA,
@@ -135,17 +142,19 @@ if(method %in% c("logcounts", "Logcounts")){
 sce <- common_modif_sc3(sce)
 # 3. Run SC3
 sce_sc3 <- run_SC3(sce, celltype_key, biology = biology)
+# save SC3 SCE object
+saveRDS(sce_sc3, file = opt$save_SCE)
 # 4. Extract cluster annotation
 sc3_clust_annot <- sce_sc3@colData[, grep("sc3_", colnames(sce_sc3@colData))]
 print(head(sc3_clust_annot))
 # 5. Save cluster annotation
-write.csv(sc3_clust_annot, file = opt$output_clusters, row.names = T)
+write.csv(sc3_clust_annot, file = opt$output_clusters, row.names = TRUE)
 print("SC3 Cluster annotation saved")
 
 if(biology == TRUE) {
   # Extract gene 
   gene_annot <- rowData(sce_sc3)
   # Save 
-  write.csv(gene_annot, file = opt$output_rowdata, row.names = T)
+  write.csv(gene_annot, file = opt$output_rowdata, row.names = TRUE)
   print("SC3 Gene annotation saved")
 }
