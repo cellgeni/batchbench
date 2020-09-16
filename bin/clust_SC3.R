@@ -80,7 +80,6 @@ option_list = list(
 opt <- parse_args(OptionParser(option_list=option_list))
 
 suppressPackageStartupMessages(library(SingleCellExperiment))
-suppressPackageStartupMessages(require(SC3))
 
 
 # FUNCTIONS #
@@ -102,15 +101,17 @@ common_modif_sc3 <- function(sce){
 #run SC3 function
 run_SC3 <- function(sce, celltype_key, biology){
   
+  suppressPackageStartupMessages(require(SC3))
+  
   k <- length(table(sce[[celltype_key]])[table(sce[[celltype_key]]) > 0])
   k_vec <- c(k)
   print(paste0("k values on clustering:", k_vec))
   # biology = T enables calculation of DE genes, and marker genes
   sce_sc3 <- SC3::sc3(sce, ks = k_vec, gene_filter = FALSE, biology = biology)
   # Extract annotation of NAs-assigned cells (when dataset > 5000 cells)
-  if(ncol(sce_sc3) >= 5000){
-	  print("Dataset with >= 5000 cells. Running SVM to predict labels of all the other cells.")
-          sce <- sc3_run_svm(sce, ks = k)
+  if(ncol(sce_sc3) > 5000){
+	  print("Dataset with > 5000 cells. Running SVM to predict labels of all the other cells.")
+          sce_sc3 <- sc3_run_svm(sce_sc3, ks = k)
   }
   return(sce_sc3)
 }
@@ -142,19 +143,19 @@ if(method %in% c("logcounts", "Logcounts")){
 sce <- common_modif_sc3(sce)
 # 3. Run SC3
 sce_sc3 <- run_SC3(sce, celltype_key, biology = biology)
-# save SC3 SCE object
+# 3.2 save SC3 SCE object
 saveRDS(sce_sc3, file = opt$save_SCE)
 # 4. Extract cluster annotation
 sc3_clust_annot <- sce_sc3@colData[, grep("sc3_", colnames(sce_sc3@colData))]
 print(head(sc3_clust_annot))
 # 5. Save cluster annotation
-write.csv(sc3_clust_annot, file = opt$output_clusters, row.names = TRUE)
+write.csv(sc3_clust_annot, file = opt$output_clusters, row.names = colnames(sc3_sc3))
 print("SC3 Cluster annotation saved")
 
 if(biology == TRUE) {
   # Extract gene 
   gene_annot <- rowData(sce_sc3)
   # Save 
-  write.csv(gene_annot, file = opt$output_rowdata, row.names = TRUE)
+  write.csv(gene_annot, file = opt$output_rowdata, row.names = rownames(sce_sc3))
   print("SC3 Gene annotation saved")
 }
