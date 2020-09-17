@@ -1,6 +1,6 @@
 FROM quay.io/cellgeni/batchbench:v0.26
 # Re-install RaceID
-Rscript -e 'install.packages(c("RaceID"), dependencies = TRUE)'
-#Install SC3 via GitHub to solve issues
-install.packages("devtools")
-devtools::install_github("hemberg-lab/SC3") 
+RUN Rscript -e 'install.packages(c("RaceID"), dependencies = TRUE)'
+# Re-install SC3 from GitHub
+RUN Rscript -e 'install.packages("devtools")'
+RUN Rscript -e 'devtools::install_github("hemberg-lab/SC3")'
