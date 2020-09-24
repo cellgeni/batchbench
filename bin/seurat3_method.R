@@ -1,7 +1,9 @@
 #!/usr/bin/env Rscript
  
 #TODO
-# Currently converting SCE to Seurat in this script, this has to pass through the converter
+# IMPORTANT! > remove n_features option as doing feature selection over the Seurat objects interferes with the downstream clustering processes, where actual features selection happens. 
+# Ideate a workaround. 
+
 suppressPackageStartupMessages(library("optparse"))
 
 option_list = list(
@@ -92,7 +94,6 @@ assay_name <- opt$assay_name
 corrected_assay <- opt$corrected_assay 
 batch_key <- opt$batch_key
 hvg_method <- opt$hvg_method
-n_features <- opt$n_features
 n_anchors <- opt$n_anchors
 
 # input dataset
@@ -102,6 +103,8 @@ dataset <- as.Seurat(sce, assay = assay_name, data = assay_name, counts = assay_
 batch_vector <- as.character(dataset[[batch_key]])
 batch_names  <- names(table(batch_vector))
 N_batches <- length(batch_names)
+# for no interference in clustering analysis, where feature selection takes place:
+n_features <- nrow(dataset)
 
 # split seurat object into batches
 batch_list <- SplitObject(dataset, split.by = batch_key)
@@ -109,10 +112,10 @@ batch_list <- SplitObject(dataset, split.by = batch_key)
 for (i in 1:N_batches) {
   batch_list[[i]] <- NormalizeData(object = batch_list[[i]], 
 						verbose = FALSE)
-  batch_list[[i]] <- FindVariableFeatures(object = batch_list[[i]], 
-                                          	selection.method = hvg_method, 
-						nfeatures = n_features, 
-						verbose = F)
+  #batch_list[[i]] <- FindVariableFeatures(object = batch_list[[i]], 
+  #                                        	selection.method = hvg_method, 
+  #						nfeatures = n_features, 
+  #						verbose = F)
 	}
 
 # prevent small datasets from not having enough neighbors (k) to use when filtering anchors 
@@ -120,9 +123,10 @@ if(any(sapply(batch_list, ncol)) < 200) {
   k_filter <- (min(sapply(batch_list, ncol)))
   }else{k_filter =200}
 # Find integration anchors
-anchors <- FindIntegrationAnchors(object.list = batch_list, dims = 1:n_anchors, k.filter = k_filter)
+anchors <- FindIntegrationAnchors(object.list = batch_list, anchor.features = nrow(dataset), dims = 1:n_anchors, k.filter = k_filter)
 # Integrate subsets
-integrated <- IntegrateData( new.assay.name = corrected_assay, anchorset = anchors, dims = 1:n_anchors)
+integrated <- IntegrateData( new.assay.name = corrected_assay, anchorset = anchors, 
+				features.to.integrate= rownames(dataset), dims = 1:n_anchors)
 # save seurat3 corrected object
 saveRDS(integrated, opt$output_object)
 print("Seurat 3 worked")

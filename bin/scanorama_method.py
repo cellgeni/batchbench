@@ -30,7 +30,7 @@ def correct_scanorama(dataset_list, cell_metadata):
 
 # Subset dataset by batches    
 def subset_by_batches(dataset):
-	batch_names = dataset.obs[args.batch_key].astype('category').cat.categories
+	batch_names = dataset.obs[args.batch_key].astype('str').value_counts().index.values
 	N_batches = len(batch_names)
 	# metadata
 	cell_metadata = dataset.obs

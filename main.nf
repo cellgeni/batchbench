@@ -537,7 +537,7 @@ process clust_SC3{
 	MAX = 4
  	publishDir "${params.output_dir}/${datasetname}/Clustering/SC3_Clust", mode: 'copy', pattern: '*.csv' 
  	publishDir "${params.output_dir}/${datasetname}/Clustering/SC3_Clust/SC3_objects", mode: 'copy', pattern: '*.rds' 
-	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
+	errorStrategy { (task.exitStatus == 1 || task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "SC3 Clust $method $datasetname $features"
 
@@ -601,7 +601,8 @@ process clust_Seurat{
 		--celltype_key ${params.celltype_key}\
 		--n_pcs ${params.clust_seurat.n_pcs}\
 		--k_num ${params.clust_seurat.k_num}\
-		--output_clusters louvain_leiden_clusters-${method}-${prop_genes}-${datasetname}.csv
+		--louvain_clusters louvain_clusters-${method}-${prop_genes}-${datasetname}.csv
+		--leiden_clusters leiden_clusters-${method}-${prop_genes}-${datasetname}.csv
     	"""
 	}
 }

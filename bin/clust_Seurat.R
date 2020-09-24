@@ -12,7 +12,7 @@ option_list = list(
     type = 'character',
     help = 'Path to rds input file'
   ),
- make_option(
+  make_option(
     c("-f", "--input_features"),
     action = "store",
     default = NA,
@@ -55,13 +55,6 @@ option_list = list(
     help = 'Cell type key in cell metadata'
   ),
   make_option(
-    c("-p", "--n_pcs"),
-    action = "store",
-    default = 25,
-    type = 'integer',
-    help = 'Number of Principal Components to perform Dimensionality Reduction'
-  ),
-  make_option(
     c("-k", "--k_num"),
     action = "store",
     default = 30,
@@ -69,7 +62,21 @@ option_list = list(
     help = 'Number of nearest neighbors for the NN graph construction'
   ),
   make_option(
-    c("-o", "--output_clusters"),
+    c("-p", "--n_pcs"),
+    action = "store",
+    default = 25,
+    type = 'integer',
+    help = 'Number of Principal Components to perform Dimensionality Reduction'
+  ),
+  make_option(
+    c("-o", "--louvain_clusters"),
+    action = "store",
+    default = NA,
+    type = 'character',
+    help = 'Path to h5ad output file'
+  ),
+  make_option(
+    c("-q", "--leiden_clusters"),
     action = "store",
     default = NA,
     type = 'character',
@@ -123,7 +130,7 @@ n_pcs <- opt$n_pcs
 method <- opt$method
 if(is.null(method) || is.na(method)){ stop("Please provide the batch correction method the input file comes from") }
 
-# read input files
+# read input file
 dataset <- readRDS(opt$input_object)
 features <- as.character(read.csv(opt$input_features, row.names =1, header = T)$x)
 
@@ -137,11 +144,11 @@ if (method %in% c("bbknn", "BBKNN")){
   louvain_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
   # find clusters Leiden
   leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 4)
-  # merge Louvain & Leiden annots
-  clust_dat <- merge_annots(louvain = louvain_clusters, leiden = leiden_clusters, cell_names = colnames(dataset))
-  # save data
-  write.csv(clust_dat, file = opt$output_clusters, row.names = T)
-  print(paste0("Louvain and Leiden markers successfuly computed for method: ", method))
+  # Write results separately
+  write.csv(louvain_clusters, file = opt$louvain_clusters, row.names = T)
+  print(paste0("Louvain clustering successfuly computed for method: ", method))
+  write.csv(leiden_clusters, file = opt$leiden_clusters, row.names = T)
+  print(paste0("Leiden clustering successfuly computed for method: ", method))
 }
 
 # Case 2: for embedding correcting methods (fastMNN, harmony)
@@ -151,27 +158,12 @@ if (method %in% c("fastMNN", "FastMNN", "Harmony", "harmony")){
   # find clusters Louvain 
   louvain_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
   # find clusters Leiden
-  leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
-  # merge Louvain & Leiden annots
-  clust_dat <- merge_annots(louvain = louvain_clusters, leiden = leiden_clusters, cell_names = colnames(dataset))
-  # save data
-  write.csv(clust_dat, file = opt$output_clusters, row.names = T)
-  print(paste0("Louvain and Leiden markers successfuly computed for method: ", method))
-}
-
-# Case 2: for embedding correcting methods (fastMNN, harmony)
-if (method %in% c("fastMNN", "FastMNN", "Harmony", "harmony")){
-  # compute NN graph over batch corrected low-d embedding
-  dataset <- compute_nn_graph(seurat_obj = dataset, corrected_emb = corrected_emb, k_num = k_num)
-  # find clusters Louvain 
-  louvain_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
-  # find clusters Leiden
-  leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
-  # merge Louvain & Leiden annots
-  clust_dat <- merge_annots(louvain = louvain_clusters, leiden = leiden_clusters, cell_names = colnames(dataset))
-  # save data
-  write.csv(clust_dat, file = opt$output_clusters, row.names = T)
-  print(paste0("Louvain and Leiden markers successfuly computed for method: ", method))
+  leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 4)
+  # Write results separately
+  write.csv(louvain_clusters, file = opt$louvain_clusters, row.names = T)
+  print(paste0("Louvain clustering successfuly computed for method: ", method))
+  write.csv(leiden_clusters, file = opt$leiden_clusters, row.names = T)
+  print(paste0("Leiden clustering successfuly computed for method: ", method))
 }
 
 # Case 3: for counts matrix correcting methods except Seurat (logcounts, mnnCorrect, limma, ComBat, Scanorama)
@@ -187,16 +179,16 @@ if (method %in% c("logcounts", "Logcounts", "mnnCorrect", "mnncorrect", "limma",
   # dim red
   dataset <- dim_red(dataset, assay_name = assay_name, use_genes = all.genes, n_pcs = n_pcs)
   # NN Graph
-  dataset <- compute_nn_graph(dataset, corrected_emb = names(dataset@reductions), k_num = k_num)
+  dataset <- compute_nn_graph(dataset, corrected_emb = tail(names(dataset@reductions) ,1),  k_num = k_num)
   # find clusters Louvain 
   louvain_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
   # find clusters Leiden
   leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 4)
-  # merge Louvain & Leiden annots
-  clust_dat <- merge_annots(louvain = louvain_clusters, leiden = leiden_clusters, cell_names = colnames(dataset))
-  # save data
-  write.csv(clust_dat, file = opt$output_clusters, row.names = T)
-  print(paste0("Louvain and Leiden markers successfuly computed for method: ", method))
+  # Write results separately
+  write.csv(louvain_clusters, file = opt$louvain_clusters, row.names = T)
+  print(paste0("Louvain clustering successfuly computed for method: ", method))
+  write.csv(leiden_clusters, file = opt$leiden_clusters, row.names = T)
+  print(paste0("Leiden clustering successfuly computed for method: ", method))
 }
 
 # Case 4: for Seurat object
@@ -207,14 +199,14 @@ if (method %in% c("Seurat3", "seurat3", "Seurat")){
   # dim red
   dataset <- dim_red(dataset, assay_name = assay_name, use_genes = all.genes, n_pcs = n_pcs)
   # NN Graph
-  dataset <- compute_nn_graph(dataset, corrected_emb = names(dataset@reductions), k_num = k_num)
+  dataset <- compute_nn_graph(dataset, corrected_emb = tail(names(dataset@reductions),1), k_num = k_num)
   # find clusters Louvain 
   louvain_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 1)
   # find clusters Leiden
   leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 4)
-  # merge Louvain & Leiden annots
-  clust_dat <- merge_annots(louvain = louvain_clusters, leiden = leiden_clusters, cell_names = colnames(dataset))
-  # save data
-  write.csv(clust_dat, file = opt$output_clusters, row.names = T)
-  print(paste0("Louvain and Leiden markers successfuly computed for method: ", method))
+  # Write results separately
+  write.csv(louvain_clusters, file = opt$louvain_clusters, row.names = T)
+  print(paste0("Louvain clustering successfuly computed for method: ", method))
+  write.csv(leiden_clusters, file = opt$leiden_clusters, row.names = T)
+  print(paste0("Leiden clustering successfuly computed for method: ", method))
 }

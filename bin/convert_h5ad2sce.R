@@ -7,7 +7,7 @@ option_list = list(
     action = "store",
     default = NA,
     type = 'character',
-    help = 'Path to rds Seurat object'
+    help = 'Path to h5ad object'
   ),
   make_option(
     c("-c", "--corrected_assay"),

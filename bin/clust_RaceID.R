@@ -24,7 +24,7 @@ option_list = list(
     action = "store",
     default = "logcounts",
     type = 'character',
-    help = 'Counts assay to add to the h5ad object'
+    help = 'Uncorrected assay name.'
   ),
   make_option(
     c("-c", "--corrected_assay"),
@@ -58,31 +58,52 @@ option_list = list(
 
 opt <- parse_args(OptionParser(option_list=option_list))
 
-
 # args
-method <- opt$method
 assay_name <- opt$assay_name
 corrected_assay <- opt$corrected_assay
+method <- opt$method
 dist_metric <- opt$dist_metric
+
+# Functions
+## Remove items with zero variance
+rm_zero_var <- function(dataset, assay, axis){
+  if(!(axis %in% c(1, 2))){stop("Axis provided must be 1 or 2!")}
+  ax_zero_var <- as.numeric(which(apply(assay(dataset, assay), axis, var) == 0))
+  print(paste0("Removing ", length(ax_zero_var), " items with zero variance in axis = ", axis))
+  if(length(ax_zero_var) > 0){
+    if(axis == 1) dataset <- dataset[-ax_zero_var, ]
+    if(axis == 2) dataset <- dataset[, -ax_zero_var]
+  } 
+  dataset
+}
+## Remove negative values vrom corrected expression matrix
+rm_neg_values <- function(dataset, assay){
+  assay(dataset, assay)[assay(dataset, assay) < 0 ] <- 0 
+  dataset
+}
 
 suppressPackageStartupMessages(require(SingleCellExperiment))
 suppressPackageStartupMessages(require(RaceID))
 
-# read input file
+
+# Read input file
 dataset <- readRDS(opt$input_object)
 features <- as.character(read.csv(opt$input_features, row.names =1, header = T)$x)
-# subset input object by features
+# Subset input object by features
 dataset <- dataset[features, ]
-
-# 1. Coerce corrected matrix to 'dgCMatrix' class
-if( method %in% c("logcounts")){ 
-	mat <- as(assay(dataset, assay_name), "dgCMatrix")
-	}else{
-	mat <- as(assay(dataset, corrected_assay), "dgCMatrix")
-	}
-# 2. Build RaceID object
-## 2.1 Remove negative count values (** Should we scale values to zero-minimum instead of removing negative ones?)
-mat [mat < 0] <- 0
+# Select assay to cluster depending on method
+if( method %in% c("Logcounts", "logcounts")){ clust_assay <- assay_name 
+  }else{ clust_assay <- corrected_assay }
+## 1. Remove items with zero variance (this introduces NA values in correlation matrix and clustering is aborted!)
+# Remove cells with zero variance
+dataset <- rm_zero_var(dataset, assay = clust_assay, axis = 1)
+# Remove genes with zero variance
+dataset <- rm_zero_var(dataset, assay = clust_assay, axis = 2)
+# 2. Remove negative expression values if present
+dataset <- rm_neg_values(dataset, assay= clust_assay)
+# 3. Coerce corrected matrix to 'dgCMatrix' class
+mat <- as(assay(dataset, clust_assay), "dgCMatrix")
+# 3. Build RaceID object
 sc <- SCseq(mat)
 # 3. Add features to object (to allow successful execution)
 # 3.1 Set expression data (already filtered and normalized) as filtered data (@ndata)
