@@ -25,7 +25,7 @@ option_list = list(
     help = 'Corrected counts assay name'
   ),
   make_option(
-    c("-c", "--celltype_key"),
+    c("-t", "--celltype_key"),
     action = "store",
     default = "cell_type1",
     type = 'character',
@@ -44,7 +44,6 @@ opt <- parse_args(OptionParser(option_list=option_list))
 
 suppressPackageStartupMessages(library(Seurat))
 
-dataset <- readRDS(opt$input_object)
 # args
 assay_name <- opt$assay_name
 batch_key <- opt$batch_key
@@ -57,9 +56,9 @@ find_markers_seurat <- function(dataset, batch){
   for (i in 1:length(levels(dataset))){
     tryCatch({
       print(paste0("** Cell type ", i, "--", levels(dataset)[i]))
-      #if computing over the whole dataset, 
+      #if computing over the merged dataset, 
       if(batch == F){
-        markers_list[["whole_dataset"]][[levels(dataset)[i]]] <- FindMarkers(object = dataset, slot = "data", ident.1 = levels(dataset)[i], ident.2 = NULL, min.pct = 0.5, logfc.threshold = 2)
+        markers_list[["merged_dataset"]][[levels(dataset)[i]]] <- FindMarkers(object = dataset, slot = "data", ident.1 = levels(dataset)[i], ident.2 = NULL, min.pct = 0.5, logfc.threshold = 2)
       }
       if (batch == T){
         markers_list[[levels(dataset)[i]]] <- FindMarkers(object = dataset,  slot = "data", ident.1 = levels(dataset)[i], ident.2 = NULL, min.pct = 0.5,  logfc.threshold = 2)
@@ -71,9 +70,10 @@ find_markers_seurat <- function(dataset, batch){
 }
 #. Find_markers_by_batch
 find_markers_by_batch <- function(dataset){
-  table_batches <- table(dataset[[batch_key]])[table(dataset[[batch_key]]) > 0]
-  batch_list <- lapply(1:length(table_batches), function(x) dataset[, dataset[[batch_key]]==names(table_batches)[x]])
-  names(batch_list) <- names(table_batches)
+  #table_batches <- table(as.character(dataset[[batch_key]]))
+  #batch_list <- lapply(1:length(table_batches), function(x) dataset[, dataset[[batch_key]]==names(table_batches)[x]])
+  #names(batch_list) <- names(table_batches)
+  batch_list <- SplitObject(dataset, split.by = "Batch")
   by_batch_markers_list <- list()
   #loop through the batches
   for(i in 1:length(batch_list)){
@@ -86,9 +86,9 @@ find_markers_by_batch <- function(dataset){
 }
 
 #EXECUTE MARKERS
-#1. read object
-dataset <- readRDS(args[["input"]])
-#2. Find Markers whole dataset
+#1. read input object
+dataset <- readRDS(opt$input_object)
+#2. Find Markers merged dataset
 markers_list <- find_markers_seurat(dataset, batch = F)
 #3. Find Markers by batch
 by_batch_markers_list <- find_markers_by_batch(dataset)

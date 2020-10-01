@@ -2,25 +2,40 @@
 
 #Convert Seurat to h5ad object
 
-suppressPackageStartupMessages(library(reticulate))  
-suppressPackageStartupMessages(library(SummarizedExperiment)) 
-suppressPackageStartupMessages(library(SingleCellExperiment)) 
+suppressPackageStartupMessages(library("optparse"))
 
+option_list = list(
+    make_option(
+        c("-i", "--input_object"),
+        action = "store",
+        default = NA,
+        type = 'character',
+        help = 'Path to rds input file' 
+    ),
+    make_option(
+        c("-c", "--corrected_assay"),
+        action = "store",
+        default = "corrected",
+        type = 'character',
+        help = 'Corrected counts assay name'
+    ),
+    make_option(
+        c("-o", "--output_object"),
+        action = "store",
+        default = NA,
+        type = 'character',
+        help = 'Path to h5ad output file'
+    )
+)
+opt <- parse_args(OptionParser(option_list=option_list))
+
+#suppressPackageStartupMessages(library(reticulate))  
+suppressPackageStartupMessages(library(SingleCellExperiment)) 
 suppressPackageStartupMessages(library(loomR))
 suppressPackageStartupMessages(library(sceasy))
 
-args <- R.utils::commandArgs(asValues=TRUE)
-
-if (is.null(args[["input"]])) {stop("Provide valid path to input SCE object.")}
-if (is.null(args[["assay_name"]])) {print("No assay name provided, usign 'logcounts' as default.")
-  args[["assay_name"]] <- 'RNA'}
-if (is.null(args[["output"]])) {stop("Provide valid path to output h5ad object.")}
-
-#read object
-sce <- readRDS(args[["input"]])
-#convert sce2h5ad
-sceasy:::seurat2anndata(obj = sce, outFile = args[["output"]], main_layer = 'data', assay = args[["assay_name"]], transfer_layers = NULL)
-
-print("Seurat successfully converted to H5ad object.")
-
-
+# read input object
+sce <- readRDS(opt$input_object)
+# convert sce2h5ad and save
+sceasy:::seurat2anndata(obj = sce, outFile = opt$output_object, main_layer = opt$corrected_assay, transfer_layers = NULL)
+print("SCE successfully converted to H5ad object.")
