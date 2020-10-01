@@ -1,7 +1,6 @@
 #!/usr/bin/env Rscript
 
 # Run Seurat Louvain and Leiden clustering algorithms
-
 suppressPackageStartupMessages(library("optparse"))
 
 option_list = list(
@@ -109,13 +108,8 @@ compute_nn_graph <- function(seurat_obj, corrected_emb, k_num){
 }
 #4. Clustering
 seurat_clustering <- function(seurat_obj, clust_alg){
-  seurat_obj <- FindClusters(seurat_obj, graph.name = names(seurat_obj@graphs)[1],  resolution = 0.8, algorithm = clust_alg , verbose = F)
+  seurat_obj <- FindClusters(seurat_obj, graph.name = tail(names(dataset@graphs), 1),  resolution = 0.8, algorithm = clust_alg , verbose = F)
   seurat_obj@meta.data[["seurat_clusters"]]
-}
-#5. Merge Louvain & Leiden annotations
-merge_annots <- function(louvain, leiden, cell_names){
-  clust_dat <- data.frame("Louvain" = louvain,  "Leiden" = leiden, row.names = cell_names)
-  clust_dat
 }
 
 suppressPackageStartupMessages(library(Seurat))
@@ -145,9 +139,9 @@ if (method %in% c("bbknn", "BBKNN")){
   # find clusters Leiden
   leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 4)
   # Write results separately
-  write.csv(louvain_clusters, file = opt$louvain_clusters, row.names = T)
+  write.csv(louvain_clusters, file = opt$louvain_clusters, row.names = colnames(dataset))
   print(paste0("Louvain clustering successfuly computed for method: ", method))
-  write.csv(leiden_clusters, file = opt$leiden_clusters, row.names = T)
+  write.csv(leiden_clusters, file = opt$leiden_clusters, row.names = colnames(dataset))
   print(paste0("Leiden clustering successfuly computed for method: ", method))
 }
 
@@ -160,24 +154,24 @@ if (method %in% c("fastMNN", "FastMNN", "Harmony", "harmony")){
   # find clusters Leiden
   leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 4)
   # Write results separately
-  write.csv(louvain_clusters, file = opt$louvain_clusters, row.names = T)
+  write.csv(louvain_clusters, file = opt$louvain_clusters, row.names = colnames(dataset))
   print(paste0("Louvain clustering successfuly computed for method: ", method))
-  write.csv(leiden_clusters, file = opt$leiden_clusters, row.names = T)
+  write.csv(leiden_clusters, file = opt$leiden_clusters, row.names = colnames(dataset))
   print(paste0("Leiden clustering successfuly computed for method: ", method))
 }
 
 # Case 3: for counts matrix correcting methods except Seurat (logcounts, mnnCorrect, limma, ComBat, Scanorama)
 if (method %in% c("logcounts", "Logcounts", "mnnCorrect", "mnncorrect", "limma", "Limma", "ComBat", "combat", "Scanorama", "scanorama")){
   # logcounts
-  if(method %in% c("logcounts", "Logcounts")){assay_name <- assay_name }else{ assay_name <- corrected_assay }
+  if(method %in% c("logcounts", "Logcounts")){select_assay <- assay_name }else{ select_assay <- corrected_assay }
   # subset input object by features
   dataset <- dataset[features, ]
   
   all.genes <- rownames(dataset)
   # scale data
-  dataset <- scale_data(dataset, assay_name = assay_name, use_genes = all.genes)
+  dataset <- scale_data(dataset, assay_name = select_assay, use_genes = all.genes)
   # dim red
-  dataset <- dim_red(dataset, assay_name = assay_name, use_genes = all.genes, n_pcs = n_pcs)
+  dataset <- dim_red(dataset, assay_name = select_assay, use_genes = all.genes, n_pcs = n_pcs)
   # NN Graph
   dataset <- compute_nn_graph(dataset, corrected_emb = tail(names(dataset@reductions) ,1),  k_num = k_num)
   # find clusters Louvain 
@@ -185,9 +179,9 @@ if (method %in% c("logcounts", "Logcounts", "mnnCorrect", "mnncorrect", "limma",
   # find clusters Leiden
   leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 4)
   # Write results separately
-  write.csv(louvain_clusters, file = opt$louvain_clusters, row.names = T)
+  write.csv(louvain_clusters, file = opt$louvain_clusters, row.names = colnames(dataset))
   print(paste0("Louvain clustering successfuly computed for method: ", method))
-  write.csv(leiden_clusters, file = opt$leiden_clusters, row.names = T)
+  write.csv(leiden_clusters, file = opt$leiden_clusters, row.names = colnames(dataset))
   print(paste0("Leiden clustering successfuly computed for method: ", method))
 }
 
@@ -195,9 +189,9 @@ if (method %in% c("logcounts", "Logcounts", "mnnCorrect", "mnncorrect", "limma",
 if (method %in% c("Seurat3", "seurat3", "Seurat")){
   all.genes <- rownames(dataset)
   # scale data
-  dataset <- scale_data(dataset, assay_name = assay_name, use_genes = all.genes)
+  dataset <- scale_data(dataset, assay_name = corrected_assay, use_genes = all.genes)
   # dim red
-  dataset <- dim_red(dataset, assay_name = assay_name, use_genes = all.genes, n_pcs = n_pcs)
+  dataset <- dim_red(dataset, assay_name = corrected_assay, use_genes = all.genes, n_pcs = n_pcs)
   # NN Graph
   dataset <- compute_nn_graph(dataset, corrected_emb = tail(names(dataset@reductions),1), k_num = k_num)
   # find clusters Louvain 
@@ -205,8 +199,8 @@ if (method %in% c("Seurat3", "seurat3", "Seurat")){
   # find clusters Leiden
   leiden_clusters <- seurat_clustering(seurat_obj = dataset, clust_alg = 4)
   # Write results separately
-  write.csv(louvain_clusters, file = opt$louvain_clusters, row.names = T)
+  write.csv(louvain_clusters, file = opt$louvain_clusters, row.names = colnames(dataset))
   print(paste0("Louvain clustering successfuly computed for method: ", method))
-  write.csv(leiden_clusters, file = opt$leiden_clusters, row.names = T)
+  write.csv(leiden_clusters, file = opt$leiden_clusters, row.names = colnames(dataset))
   print(paste0("Leiden clustering successfuly computed for method: ", method))
 }

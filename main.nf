@@ -14,7 +14,7 @@ Channel.fromPath(params.dataset_list)
 process get_datasets {
 	MAX = 4
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 2.GB + 10.GB * (task.attempt - 1) }
+	memory = { 10.GB + 10.GB * (task.attempt - 1) }
  	tag "$datasetname"
 
     	input:
@@ -76,7 +76,7 @@ process subset_genes_by_cv {
 	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Subset_features", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 2.GB + 10.GB * (task.attempt - 1) }
+	memory = { 10GB + 10.GB * (task.attempt - 1) }
 	tag "$datasetname subset $prop_genes genes by coeff. variation"
 	
 	input:
@@ -388,7 +388,7 @@ process fastMNN{
 process conv_h5ad2sce {
 	MAX = 4
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 2.GB + 10.GB * (task.attempt - 1) }
+	memory = { 10.GB + 10.GB * (task.attempt - 1) }
 	tag "sce2h5ad $method $datasetname"
 	
 	input:
@@ -536,8 +536,8 @@ if(params.clust_SC3.run == "True"){
 process clust_SC3{
 	MAX = 4
  	publishDir "${params.output_dir}/${datasetname}/Clustering/SC3_Clust", mode: 'copy', pattern: '*.csv' 
- 	publishDir "${params.output_dir}/${datasetname}/Clustering/SC3_Clust/SC3_objects", mode: 'copy', pattern: '*.rds' 
-	errorStrategy { (task.exitStatus == 1 || task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
+ 	//publishDir "${params.output_dir}/${datasetname}/Clustering/SC3_Clust/SC3_objects", mode: 'copy', pattern: '*.rds' 
+	errorStrategy { ( task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
 	memory = { 10.GB + 20.GB * (task.attempt - 1) }
     	tag "SC3 Clust $method $datasetname $features"
 
@@ -601,7 +601,7 @@ process clust_Seurat{
 		--celltype_key ${params.celltype_key}\
 		--n_pcs ${params.clust_seurat.n_pcs}\
 		--k_num ${params.clust_seurat.k_num}\
-		--louvain_clusters louvain_clusters-${method}-${prop_genes}-${datasetname}.csv
+		--louvain_clusters louvain_clusters-${method}-${prop_genes}-${datasetname}.csv\
 		--leiden_clusters leiden_clusters-${method}-${prop_genes}-${datasetname}.csv
     	"""
 	}
@@ -653,7 +653,7 @@ process clust_RaceID{
 	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Clustering/RaceID_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt - 1) }
+	memory = { 20.GB + 20.GB * (task.attempt - 1) }
     	tag "RaceID Clust $method $datasetname $features"
 
     	input:

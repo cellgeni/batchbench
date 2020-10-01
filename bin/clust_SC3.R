@@ -83,6 +83,18 @@ suppressPackageStartupMessages(library(SingleCellExperiment))
 
 
 # FUNCTIONS #
+
+# Remove items with zero variance
+rm_zero_var <- function(dataset, assay, axis){
+  if(!(axis %in% c(1, 2))){stop("Axis provided must be 1 or 2!")}
+  ax_zero_var <- as.numeric(which(apply(assay(dataset, assay), axis, var) == 0))
+  print(paste0("Removing ", length(ax_zero_var), " items with zero variance in axis = ", axis))
+  if(length(ax_zero_var) > 0){
+    if(axis == 1) dataset <- dataset[-ax_zero_var, ]
+    if(axis == 2) dataset <- dataset[, -ax_zero_var]
+  } 
+  dataset
+}
 # build custom SCE object
 exp_sce <- function(dataset, assay_name){
   counts_mat <- as.matrix(assay(dataset, assay_name))
@@ -100,14 +112,11 @@ common_modif_sc3 <- function(sce){
 }
 #run SC3 function
 run_SC3 <- function(sce, celltype_key, biology){
-  
-  suppressPackageStartupMessages(library(SC3))
-  
   k <- length(table(sce[[celltype_key]])[table(sce[[celltype_key]]) > 0])
   k_vec <- c(k)
   print(paste0("k values on clustering:", k_vec))
   # biology = T enables calculation of DE genes, and marker genes
-  sce_sc3 <- SC3::sc3(sce, ks = k_vec, gene_filter = FALSE, biology = biology)
+  sce_sc3 <- SC3::sc3(sce, ks = k_vec, gene_filter = FALSE, biology = FALSE)
   # Extract annotation of NAs-assigned cells (when dataset > 5000 cells)
   if(ncol(sce_sc3) > 5000){
 	  print("Dataset with > 5000 cells. Running SVM to predict labels of all the other cells.")
@@ -135,6 +144,15 @@ features <- as.character(read.csv(opt$input_features, row.names =1, header = T)$
 print("C")
 # subset input object by features
 dataset <- dataset[features, ]
+
+# Select assay to cluster depending on method
+if( method %in% c("Logcounts", "logcounts")){ clust_assay <- assay_name 
+  }else{ clust_assay <- corrected_assay }
+## 1. Remove items with zero variance (this introduces NA values in correlation matrix and clustering is aborted!)
+# Remove cells with zero variance
+dataset <- rm_zero_var(dataset, assay = clust_assay, axis = 1)
+# Remove genes with zero variance
+dataset <- rm_zero_var(dataset, assay = clust_assay, axis = 2)
 print("D")
 
 # 1. Build SC3 custom SCE object
@@ -148,16 +166,17 @@ print("E")
 sce <- common_modif_sc3(sce)
 print("F")
 # 3. Run SC3
+suppressPackageStartupMessages(library(SC3))
 sce_sc3 <- run_SC3(sce, celltype_key, biology = biology)
 print("G")
 # 3.2 save SC3 SCE object
-saveRDS(sce_sc3, file = opt$save_SCE)
+#saveRDS(sce_sc3, file = opt$save_SCE)
 print("H")
 # 4. Extract cluster annotation
 sc3_clust_annot <- sce_sc3@colData[, grep("sc3_", colnames(sce_sc3@colData))]
 print(head(sc3_clust_annot))
 # 5. Save cluster annotation
-write.csv(sc3_clust_annot, file = opt$output_clusters, row.names = colnames(sc3_sc3))
+write.csv(sc3_clust_annot, file = opt$output_clusters, row.names = colnames(sce_sc3))
 print("SC3 Cluster annotation saved")
 
 if(biology == TRUE) {
