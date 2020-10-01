@@ -1,27 +1,44 @@
 #!/usr/bin/env Rscript
 
-#Convert Seurat to SCE
+# Convert Seurat to SCE
 
-#TODO
-##Sceasy package doe snot support the conversion Seurat to SCE, although they say so in the documentation. 
-##Report as GitHub ISSUE!
+suppressPackageStartupMessages(library("optparse"))
+
+option_list = list(
+    make_option(
+        c("-i", "--input_object"),
+        action = "store",
+        default = NA,
+        type = 'character',
+        help = 'Path to rds Seurat object' 
+    	),
+    make_option(
+    	c("-c", "--corrected_assay"),
+    	action = "store",
+    	default = "corrected",
+    	type = 'character',
+    	help = 'Corrected counts assay name'
+  	),
+    make_option(
+        c("-o", "--output_object"),
+        action = "store",
+        default = NA,
+        type = 'character',
+        help = 'Path to the rds SCE object'
+    	)
+)
+opt <- parse_args(OptionParser(option_list=option_list))
 
 suppressPackageStartupMessages(require(Seurat))
 suppressPackageStartupMessages(require(SingleCellExperiment))
-suppressPackageStartupMessages(require(sceasy))
-
-args <- R.utils::commandArgs(asValues=TRUE)
-
-if (is.null(args[["input"]])) {stop("Provide valid path to input Seurat object.")}
-if (is.null(args[["output"]])) {stop("Provide valid path to output SCE object.")}
-
-#read Seurat object
-seurat_obj <- readRDS(args[["input"]])
-#convert Seurat to SCE and Save
-if (is.null(args[["assay_name"]])) { print("Seurat assay to extract not specified. Setting assay to 'RNA'")
-  assay_name <- "RNA" }
-
-#Convert Seurat to SCE
-seurat2sce <- as.SingleCellExperiment(seurat_obj, assay = assay_name)
-
+# args
+corrected_assay <- opt$corrected_assay
+# read Seurat object
+seurat_obj <- readRDS(opt$input_object)
+if(!(corrected_assay %in% names(seurat_obj@assays))) stop("Corrected assay name provided not in Seurat object")
+# Convert Seurat to SCE
+seurat2sce <- as.SingleCellExperiment(seurat_obj, assay = corrected_assay)
+# by default as.SingleCellExperiment sets new assay to 'logcounts', rename it to 'corrected'
+names(assays(seurat2sce)) <- corrected_assay
+saveRDS(seurat2sce, opt$output_object)
 print("Seurat successfully converted to SCE object!")
