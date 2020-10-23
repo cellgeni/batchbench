@@ -14,7 +14,7 @@ Channel.fromPath(params.dataset_list)
 process get_datasets {
 	MAX = 4
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 10.GB * (task.attempt - 1) }
+	memory = { 10.GB + 10.GB * (task.attempt) }
  	tag "$datasetname"
 
     	input:
@@ -44,7 +44,7 @@ process QC_rds{
     	publishDir "${params.output_dir}/${datasetname}", mode: 'copy', pattern: "*.txt" 
     	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy', pattern: "*.rds" 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 20.GB + 10.GB * (task.attempt - 1) }
+	memory = { 20.GB + 10.GB * (task.attempt) }
 	tag "QC $datasetname"
 
         input:
@@ -76,7 +76,7 @@ process subset_genes_by_cv {
 	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Subset_features", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 10.GB * (task.attempt - 1) }
+	memory = { 10.GB + 10.GB * (task.attempt) }
 	tag "$datasetname subset $prop_genes genes by coeff. variation"
 	
 	input:
@@ -103,7 +103,7 @@ process conv_sce2h5ad {
     	publishDir "${params.output_dir}/${datasetname}/Converted_objects", mode: 'copy' 
 	MAX = 4
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = {5.GB + 10.GB * (task.attempt - 1) }
+	memory = {5.GB + 10.GB * (task.attempt) }
 	tag "h5ad2sce $datasetname"
 	
 	input:
@@ -127,7 +127,7 @@ process BBKNN {
 	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt - 1) }
+	memory = { 10.GB + 20.GB * (task.attempt) }
         tag "BBKNN $datasetname"
         
 	input:
@@ -157,7 +157,7 @@ process Scanorama {
 	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt - 1) }
+	memory = { 10.GB + 20.GB * (task.attempt) }
      	tag "Scanorama $datasetname"
      	
 	input:
@@ -189,7 +189,7 @@ process Harmony {
 	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt - 1) }
+	memory = { 10.GB + 20.GB * (task.attempt) }
 	tag "Harmony $datasetname"
 	
 	input:
@@ -222,7 +222,7 @@ process Limma {
 	MAX = 4
 	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt - 1) }
+	memory = { 10.GB + 20.GB * (task.attempt) }
     	tag "Limma $datasetname"
     	
 	input:
@@ -253,7 +253,7 @@ process Combat{
 	MAX = 4
 	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt - 1) }
+	memory = { 10.GB + 20.GB * (task.attempt) }
     	tag "Combat $datasetname"
     	
 	input:
@@ -284,7 +284,7 @@ process Seurat_3{
 	MAX = 4
  	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt - 1) }
+	memory = { 10.GB + 20.GB * (task.attempt) }
     	tag "Seurat 3 $datasetname"
     	
 	input:
@@ -319,7 +319,7 @@ process mnnCorrect{
 	MAX = 4
 	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt - 1) }
+	memory = { 10.GB + 20.GB * (task.attempt) }
     	tag "mnnCorrect $datasetname"
     	label "long_running"
     	
@@ -356,7 +356,7 @@ process fastMNN{
 	MAX = 4
  	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt - 1) }
+	memory = { 10.GB + 20.GB * (task.attempt) }
     	tag "fastMNNt $datasetname"
     	
 	input:
@@ -390,7 +390,7 @@ process conv_h5ad2sce {
     	publishDir "${params.output_dir}/${datasetname}/Converted_objects", mode: 'copy' 
 	MAX = 4
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 10.GB * (task.attempt - 1) }
+	memory = { 10.GB + 10.GB * (task.attempt) }
 	tag "sce2h5ad $method $datasetname"
 	
 	input:
@@ -416,7 +416,7 @@ process conv_seurat2sce {
     	publishDir "${params.output_dir}/${datasetname}/Converted_objects", mode: 'copy' 
 	MAX = 4
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 5.GB + 10.GB * (task.attempt - 1) }
+	memory = { 5.GB + 10.GB * (task.attempt) }
 	tag "seurat2sce $method $datasetname"
 	
 	input:
@@ -439,7 +439,7 @@ process conv_h5ad2seurat{
     	publishDir "${params.output_dir}/${datasetname}/Converted_objects", mode: 'copy' 
 	MAX = 4
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 10.GB * (task.attempt - 1) }
+	memory = { 10.GB + 10.GB * (task.attempt) }
 	tag "h5ad2seurat $method $datasetname"
      	
 	input:
@@ -471,7 +471,7 @@ process conv_sce2seurat{
     	publishDir "${params.output_dir}/${datasetname}/Converted_objects", mode: 'copy' 
 	MAX = 4
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 5.GB + 10.GB * (task.attempt - 1) }
+	memory = { 5.GB + 10.GB * (task.attempt) }
 	tag "sce2seurat $method $datasetname"
      	
 	input:
@@ -507,7 +507,7 @@ process entropy {
 	MAX = 4
  	publishDir "${params.output_dir}/${datasetname}/entropy", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 10.GB * (task.attempt - 1) }
+	memory = { 10.GB + 10.GB * (task.attempt) }
 	tag "compute entropy $datain"
 	
 	input:
@@ -543,7 +543,7 @@ process clust_SC3{
  	publishDir "${params.output_dir}/${datasetname}/Clustering/SC3_Clust", mode: 'copy', pattern: '*.csv' 
  	//publishDir "${params.output_dir}/${datasetname}/Clustering/SC3_Clust/SC3_objects", mode: 'copy', pattern: '*.rds' 
 	errorStrategy { ( task.exitStatus == 1 || task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 25.GB + 10.GB * (task.attempt - 1) }
+	memory = { 25.GB + 10.GB * (task.attempt) }
     	tag "SC3 Clust $method $datasetname $features"
 
     	input:
@@ -585,7 +585,7 @@ CLUST_SEURAT = COUNTS_MAT_CLUST_SEURAT.mix( REST_CLUST_SEURAT )
 if(params.clust_Seurat.run == "True"){
 process clust_Seurat{
     	publishDir "${params.output_dir}/${datasetname}/Clustering/Seurat_Clust", mode: 'copy' 
-	memory = { 25.GB + 10.GB * (task.attempt - 1) }
+	memory = { 25.GB + 10.GB * (task.attempt) }
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
     	tag "Seurat Clust $method $datasetname $features"
 
@@ -629,7 +629,7 @@ process clust_Hierarch {
 	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Clustering/Hierarch_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 25.GB + 10.GB * (task.attempt - 1) }
+	memory = { 25.GB + 10.GB * (task.attempt) }
     	tag "Hierarch Clust $method $datasetname $features"
 
     	input:
@@ -658,7 +658,7 @@ process clust_RaceID{
 	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Clustering/RaceID_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 25.GB + 10.GB * (task.attempt - 1) }
+	memory = { 25.GB + 10.GB * (task.attempt) }
     	tag "RaceID Clust $method $datasetname $features"
 
     	input:
@@ -688,7 +688,7 @@ process find_markers{
 	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Markers", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 5.GB + 20.GB * (task.attempt - 1) }
+	memory = { 5.GB + 20.GB * (task.attempt) }
     	tag "Markers $method $datasetname"
 
     	input:
@@ -719,7 +719,7 @@ process conv_rds2h5ad {
     	publishDir "${params.output_dir}/${datasetname}/Converted_objects", mode: 'copy' 
 	MAX = 4
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 5.GB + 10.GB * (task.attempt - 1) }
+	memory = { 5.GB + 10.GB * (task.attempt) }
     	tag "conv_rds2h5ad $method $datasetname"
     	label "fast_running"
     	
@@ -747,7 +747,7 @@ process UMAP {
 	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/UMAP" , mode: 'copy', pattern: '*.csv' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt <= MAX ? 'retry' : 'ignore' }
-	memory = { 5.GB + 20.GB * (task.attempt - 1) }
+	memory = { 5.GB + 20.GB * (task.attempt) }
     	tag "UMAP $method $datasetname"
     	
 	input:
