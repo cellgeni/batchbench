@@ -127,6 +127,8 @@ if(is.null(method) || is.na(method)){ stop("Please provide the batch correction 
 # read input file
 dataset <- readRDS(opt$input_object)
 features <- as.character(read.csv(opt$input_features, row.names =1, header = T)$x)
+# subset input object by features
+dataset <- dataset[features, ]
 
 ## EXECUTE ##
 # Case 1: for graph correcting methods (BBKNN)
