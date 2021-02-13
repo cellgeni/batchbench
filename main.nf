@@ -10,7 +10,7 @@ Channel.fromPath(params.dataset_list)
   .view()
   .set { DATALIST }
 
-// fetch data
+// Fetch data
 process get_datasets {
 	MAX = 4
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
@@ -26,7 +26,7 @@ process get_datasets {
 		
     	shell:
     	'''
-    	Rfile="!{params.data_dir}/!{datasetname}.rds"
+    	Rfile="!{params.data_dir}!{datasetname}.rds"
     	if [[ ! -e $Rfile ]]; then
     	  echo "Please check existence of $Rfile"
     	  false
@@ -37,7 +37,7 @@ process get_datasets {
 }
 
 
-// preform QC based on min_genes expressed per cell, min_cells with expression per gene, remove batch and cell types representing less than bt_thres and ct_thres proportion of totalcells 
+// data QC 
 if(params.QC_rds.run == "True"){
 process QC_rds{
 	MAX = 4
@@ -66,13 +66,13 @@ process QC_rds{
 	}
 }
 
-// porportion of features to take into account in clustering step
+// Fraction of features for clustering 
 PROP_GENES = Channel.from(0.05, 0.1, 0.2, 0.5, 1)
 // combine objects with different feature proportions 
 SUBSET_FEATURES_CV = SUBSET_FEATURES.combine(PROP_GENES)
 
-// subset genes by their coeficient of variation according to gene proportions
-process subset_genes_by_cv {
+// Subset features for clustering analysis 
+process subset_feat_clustering {
 	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Subset_features", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
@@ -93,7 +93,7 @@ process subset_genes_by_cv {
 	"""
 }
 
-//Duplicate features channel for each of the clustering processes
+// Duplicate features channel for each of the clustering processes
 FEATURES.into{ CLUST_SC3_FEATURES; CLUST_SEURAT_FEATURES; CLUST_HIERARCH_FEATURES; CONSIDER_ALL_FEATURES}
 // Create channel with a single csv file containing all features - For methods which gene space cannot be subsetted
 ALL_FEATURES = CONSIDER_ALL_FEATURES.filter{ it[1] == 1 }.first() 
@@ -456,14 +456,14 @@ process conv_h5ad2seurat{
 	""" 
 	}
 
-// separate scanorama anb BBKNN channels as one will be combined with features and second not
+// Separate scanorama anb BBKNN channels as one will be combined with features and second not
 SCANORAMA_CLUST_SEURAT = SCANORAMA_CLUST_SEU.filter{ it[1] == "scanorama" }
 BBKNN_CLUST_SEURAT = BBKNN_CLUST_SEU.filter{ it[1] == "bbknn" }
 
-// Only Scanorama method can be used to compute marker genes 
+// Marker genes can only be computed on Scanorama method 
 SCANORAMA_MARKERS  = PY_METHODS_MARKERS.filter{ it[1] == "scanorama" }
 
-//Merge SCE object channels to convert to Seurat
+// Merge SCE object channels to convert to Seurat
 LOGCOUNTS_2SEURAT.mix(HARMONY_2SEURAT, LIMMA_2SEURAT, COMBAT_2SEURAT, MNNCORRECT_2SEURAT, FASTMNN_2SEURAT).set{CONV_SCE2SEURAT}
 
 //Conv_4. Convert SCE to Seurat 
@@ -488,21 +488,21 @@ process conv_sce2seurat{
 		--output_object seurat_obj.${method}.${datasetname}.rds
 	""" 
 	}
-// separate SCE_CLUST_SEURAT channel into counts-mat and other methods (low-d and graph)
+
+// Separate SCE_CLUST_SEURAT channel into counts-mat and other methods (low-d and graph)
 SCE_CLUST_SEURAT.into{ SCE_CLUST_SEURAT_1; SCE_CLUST_SEURAT_2 }
 SCE_COUNTS_MAT_CLUST_SEURAT = SCE_CLUST_SEURAT_1.filter{ it[2] == "exp_matrix" } 
 LOW_D_CLUST_SEURAT = SCE_CLUST_SEURAT_2.filter{ it[2] == "embedding" } 
 
-// filter out Harmony and fastMNN (low-D embedding) from MARKERS Channel
+// Filter out Harmony and fastMNN (low-D embedding) from MARKERS Channel
 SCE_MARKERS_FILT  = SCE_MARKERS.filter{ it[1] != "harmony" || it[1] != "fastMNN" }
 
 // Merge input channels for entropy
 LOGCOUNTS_ENTROPY.mix(HARMONY_ENTROPY, LIMMA_ENTROPY, COMBAT_ENTROPY, MNNCORRECT_ENTROPY, FASTMNN_ENTROPY, PY_METHODS_ENTROPY, SEURAT_ENTROPY).into{ENTROPY; CLUST_HIERARCH_NO_FEATURES}
 
-// compute entropy 
+// Compute Mixing Entropy 
 if(params.entropy.run == "True"){
 
-// calculate Shannon entropy 
 process entropy {
 	MAX = 4
  	publishDir "${params.output_dir}/${datasetname}/entropy", mode: 'copy' 
@@ -532,10 +532,13 @@ process entropy {
 	}
 }
 
-//Merge all input channels to SC3 clustering, and RaceID clustering
+
+//// CLUSTERING ANALYSIS ////
+
+// Merge all input channels to SC3 clustering, and RaceID clustering
 LOGCOUNTS_CLUST_SC3.mix(LIMMA_CLUST_SC3, COMBAT_CLUST_SC3, MNNCORRECT_CLUST_SC3, SCANORAMA_CLUST_SC3, SEURAT_CLUST_SC3).combine(CLUST_SC3_FEATURES, by: 0).into{ CLUST_SC3; CLUST_RACEID}
 
-// run SC3 clustering
+// 1. SC3 clustering
 if(params.clust_SC3.run == "True"){
 
 process clust_SC3{
@@ -581,11 +584,12 @@ REST_CLUST_SEURAT = LOW_D_CLUST_SEURAT.mix(BBKNN_CLUST_SEURAT).combine(ALL_FEATU
 CLUST_SEURAT = COUNTS_MAT_CLUST_SEURAT.mix( REST_CLUST_SEURAT )
 
 
-// run Seurat clustering
+// 2. Seurat Clustering
 if(params.clust_Seurat.run == "True"){
 process clust_Seurat{
+	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Clustering/Seurat_Clust", mode: 'copy' 
-	memory = { 25.GB + 10.GB * (task.attempt) }
+	memory = { 45.GB + 20.GB * (task.attempt) }
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
     	tag "Seurat Clust $method $datasetname $features"
 
@@ -623,7 +627,7 @@ REST_CLUST_HIERARCH = CLUST_HIERARCH_NO_FEATURES_2.filter { it[2] != "exp_matrix
 //// Mix channels
 CLUST_HIERARCH = COUNTS_MAT_CLUST_HIERARCH.mix(REST_CLUST_HIERARCH)
 
-// run hierarchical clustering
+// 3. Hierarchical Clustering
 if(params.clust_Hierarch.run == "True"){
 process clust_Hierarch {
 	MAX = 4
@@ -652,13 +656,13 @@ process clust_Hierarch {
 	}
 }
 
-// run RaceID clustering
+// 4. RaceID Clustering
 if(params.clust_RaceID.run == "True"){
 process clust_RaceID{
 	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Clustering/RaceID_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 40.GB + 10.GB * (task.attempt) }
+	memory = { 30.GB + 10.GB * (task.attempt) }
     	tag "RaceID Clust $method $datasetname $features"
 
     	input:
@@ -682,7 +686,8 @@ process clust_RaceID{
 // Merge all Seurat FindMarkers input channel 
 SEURAT3_MARKERS.mix(SCANORAMA_MARKERS, SCE_MARKERS_FILT).set{ MARKERS }
 
-// run marker genes
+//// Marker Genes ////
+
 if(params.find_markers.run == "True"){
 process find_markers{
 	MAX = 4
@@ -711,9 +716,11 @@ process find_markers{
 
 //Merge all input channels to UMAP
 LOGCOUNTS_UMAP.mix(HARMONY_UMAP, LIMMA_UMAP, COMBAT_UMAP, SEURAT_UMAP, MNNCORRECT_UMAP, FASTMNN_UMAP).set{SCE_UMAP}
-// run UMAP
+
+//// Generate UMAP Embedding ////
 
 if(params.UMAP.run == "True"){
+
 // Conv_5 Convert RDS (SCE and Seurat) to H5ad objects to compute UMAP only in Python
 process conv_rds2h5ad {
     	publishDir "${params.output_dir}/${datasetname}/Converted_objects", mode: 'copy' 

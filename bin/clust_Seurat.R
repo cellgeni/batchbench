@@ -167,7 +167,7 @@ if (method %in% c("logcounts", "Logcounts", "mnnCorrect", "mnncorrect", "limma",
   # logcounts
   if(method %in% c("logcounts", "Logcounts")){select_assay <- assay_name }else{ select_assay <- corrected_assay }
   # subset input object by features
-  dataset <- dataset[features, ]
+  #dataset <- dataset[features, ] # already done at top of script
   
   all.genes <- rownames(dataset)
   # scale data
