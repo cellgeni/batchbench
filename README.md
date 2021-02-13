@@ -1,85 +1,52 @@
-# batchbench
+# BatchBench: flexible comparison of batch correction methods for single-cell RNA-seq
 
-BatchBench is a Nextflow workflow for running the following scRNA-Seq data batch effect correction methods:
-* mnnCorrect 
-* limma
-* ComBat
-* Seurat 3
-* Scanorama
-* Harmony
+BatchBench is a modular and flexible pipeline for comparing batch correction methods for single-cell RNA-seq data. It includes eight popular batch correction methods as well as a set of downstream analysis for assessing their performance including __calculation of mixing entropy , __clustering analysis__, __marker genes__, and __UMAP embedding generation__. 
+
+The batch effect removal tools considered in Batchbench are (link to publication): 
+
+* [mnnCorrect](https://www.nature.com/articles/nbt.4091)
+* [limma](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6687398/)
+* [ComBat](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3307112/)
+* [Seurat 3](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6687398/) 
+* [Scanorama](https://www.nature.com/articles/s41587-019-0113-3)
+* [Harmony](https://www.nature.com/articles/s41592-019-0619-0)
 * FastMNN
-* BBKNN
+* [BBKNN](https://academic.oup.com/bioinformatics/article/36/3/964/5545955)
 
 ## Run BatchBench
 
-The pieline is run through the bash script `RESUME_Batchbench`. Here the profiles, data directory and output directory are specified. Nextflow can generate an execution report, a timeline and a flowchart which output directory is specified here. 
-Additionally, the `-resume` command line option allows for the continuation of a workflow execution
-```
-source=/home/ubuntu/main.nf
+The pieline is run through the bash script `run_batchbench.sh`. 
 
-$HOME/bin/nextflow run $source \
-        -profile docker,local\
-        --datadir /home/ubuntu/BatchBench/data\
-        --metadata /home/ubuntu/BatchBench/data/dataset_list.txt\
-        --outdir /home/ubuntu/BatchBench/results\
-        -with-report /home/ubuntu/BatchBench/reports/report.html\
-        -with-trace /home/ubuntu/BatchBench/reports/trace.txt\
-        -with-timeline /home/ubuntu/BatchBench/reports/timeline.html\
-        -with-dag /home/ubuntu/BatchBench/reports/flowchart.png\
-        -resume
-```
+In this script you can specify the source directory for running the pipeline (__source_dir__), the results output directory (__output_dir__), and the nextflow report directory (__report_dir__). Additionally, the `-resume` option allows for the continuation of a workflow execution. 
 
-Equivalently, the pipeline can be run from the command line as:
-```
-nextflow run main.nf -profile docker,local --datadir /home/ubuntu/BatchBench/data --metadata /home/ubuntu/BatchBench/data/dataset_list.txt --outdir /home/ubuntu/BatchBench/results -resume
-```
 ## Input
-As a input to the workflow equivalent __SingleCellExperiment rds__ object and __AnnData h5ad__ object should be present in the data directory, and the data set name should be specified in the `metadata.txt` file. 
+Input to Batchbench must be an __rds__ R object of class __SingleCellExperiment__. 
 
-The workflow expects the log normalized counts to be stored in the `logcounts` assay in the rds object, and in `.X` matrix in the AnnData object.
+To enable full funcitonallity the `nextflow.config` file parameters must be modified to you own case: 
+1. __data_dir__: Directory containing the data. 
+2. __dataset_list__: Path to a text file containing a list of the datasets to be included (including the file base name, without preffix).
+3. __batch_key__: Object metadata column containing the batch identity of each cell. 
+4. __celltype_key__: Object metadata column containing the cell type identity of each cell. 
+5. __assay_name__: Name of the assay to perform batch correction. Default value is `logcounts`.
 
-#### Object Conversion:
-Usually, data will be present in one format. To convert from one format to the other we provide `converter scripts`:
-- Rds to h5ad:
-```
-rds_h5ad_converter.R\
-    --input path_to_rds\
-    --output path_to_new_h5ad
-```
-- H5ad to rds:
-```
-h5ad_rds_converter.R\
-    --input path_to_h5ad\
-    --output path_to_new_rds
-```
-#### Metadata specifications
-For the workflow to run, both rds and h5ad objects must specify their batch annotation and cell type annotation in the object metadata, as __Batch__ and __cell_type1__ respectively. 
 
-- For rds object:
-```
-SingleCellExperiment@colData@listData[["Batch"]]
-SingleCellExperiment@colData@listData[["cell_type1"]]
-```
-- For h5ad object:
-```
-AnnData.obs[["Batch"]]
-AnnData.obs[["cell_type1"]]
-```
+## Workflow structure
 
-## BatchBench
-The workflow initially checks the presence of both rds and h5ad objects for each of the datasets listed in `dataset_list.txt`.
-### 1. QC
-This is a mild quality control step where: 
-- Cells with `Batch` or `cell_type1` labelled as NA are removed. 
-- Cells with less than `min_genes` genes are removed. 
-- Genex expressed in less that `min_cells` cells are removed. 
-- Batches representing less than `bt_thres` per cent of the total number of cells are removed. 
-- Cell types representing less than `ct_thres` per cent of the total number of cells are removed.
+### 1. data QC
+BatchBench initially performs a filtering of the input dataset. This can be customized according to the parameters in the __QC_rds__ process of the `nextflow.config` file.
 
-The purpose of `bt_thres` and `ct_thres` is avoiding very small batche or cell populations affecting the downstream entropy calculation. 
+- Cell filtering: Cells including less than `min_genes` features are excluded. Cells with `batch_key` or `celltype_key` labelled as NA are removed. 
+- Feature filtering: features present in less that `min_cells` cells are excluded. 
+- Batch filtering: Batches representing less than `bt_thres` of the total number of cells are removed. 
+- Cell type filtering: Cell types representing less than `ct_thres` per cent of the total number of cells are removed.
 
-### 2. Batch correction
-Each of the batch corrected object is saved as specified in the `publisDir` parameter. This way one can check how the different methods correct the input data. 
+In order to disable the data QC step, the previous arguments can be stet to `0` in the `nextflow.config` file.
+
+### 2. Batch correction methods
+
+Each of the batch corrected methods can be enabled or disabled from the `nextflow.config` file.
+
+The batch corrected output objects are saved in the `Corrected_objects` subdirectory within the results directory.
 
 ### 3. Outputs
 #### 3.1 Compute Shannon Entropy
