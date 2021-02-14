@@ -1,17 +1,10 @@
 # BatchBench: flexible comparison of batch correction methods for single-cell RNA-seq
 
-BatchBench is a modular and flexible pipeline for comparing batch correction methods for single-cell RNA-seq data. It includes eight popular batch correction methods as well as a set of downstream analysis for assessing their performance including __calculation of mixing entropy , __clustering analysis__, __marker genes__, and __UMAP embedding generation__. 
+BatchBench is a modular and flexible pipeline for comparing batch correction methods for single-cell RNA-seq data. It performs __batch correction__ considering eight popular methods for scRNA-seq data as well as a set of downstream analysis for assessing their performance including __calculation of mixing entropy__ , __clustering analysis__, __marker genes__, and __UMAP embedding generation__. 
 
-The batch effect removal tools considered in Batchbench are (link to publication): 
+__Publication__: 
 
-* [mnnCorrect](https://www.nature.com/articles/nbt.4091)
-* [limma](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6687398/)
-* [ComBat](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3307112/)
-* [Seurat 3](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6687398/) 
-* [Scanorama](https://www.nature.com/articles/s41587-019-0113-3)
-* [Harmony](https://www.nature.com/articles/s41592-019-0619-0)
-* FastMNN
-* [BBKNN](https://academic.oup.com/bioinformatics/article/36/3/964/5545955)
+Ruben Chazarra-Gil, Stijn van Dongen, Vladimir Yu Kiselev, Martin Hemberg, [Flexible comparison of batch correction methods for single-cell RNA-seq using BatchBench]( https://doi.org/10.1093/nar/gkab004), Nucleic Acids Research, 2021;, gkab004, https://doi.org/10.1093/nar/gkab004 
 
 ## Run BatchBench
 
@@ -42,7 +35,18 @@ BatchBench initially performs a filtering of the input dataset. This can be cust
 
 In order to disable the data QC step, the previous arguments can be stet to `0` in the `nextflow.config` file.
 
-### 2. Batch correction methods
+### 2. Batch correction 
+
+The batch effect removal tools considered in Batchbench are: 
+
+* [mnnCorrect](https://www.nature.com/articles/nbt.4091)
+* [limma](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6687398/)
+* [ComBat](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3307112/)
+* [Seurat 3](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6687398/) 
+* [Scanorama](https://www.nature.com/articles/s41587-019-0113-3)
+* [Harmony](https://www.nature.com/articles/s41592-019-0619-0)
+* FastMNN
+* [BBKNN](https://academic.oup.com/bioinformatics/article/36/3/964/5545955)
 
 Each of the batch corrected methods can be enabled or disabled from the `nextflow.config` file.
 
