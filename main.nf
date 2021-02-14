@@ -38,7 +38,6 @@ process get_datasets {
 
 
 // data QC 
-if(params.QC_rds.run == "True"){
 process QC_rds{
 	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}", mode: 'copy', pattern: "*.txt" 
@@ -64,7 +63,6 @@ process QC_rds{
 		--output_object QC.${datasetname}.rds > QC_info.${datasetname}.txt
         """
 	}
-}
 
 // Fraction of features for clustering 
 PROP_GENES = Channel.from(0.05, 0.1, 0.2, 0.5, 1)
@@ -505,7 +503,7 @@ if(params.entropy.run == "True"){
 
 process entropy {
 	MAX = 4
- 	publishDir "${params.output_dir}/${datasetname}/entropy", mode: 'copy' 
+ 	publishDir "${params.output_dir}/${datasetname}/Entropy", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
 	memory = { 10.GB + 10.GB * (task.attempt) }
 	tag "compute entropy $datain"
@@ -699,15 +697,16 @@ process find_markers{
     	input:
     	set val(datasetname), val(method), val(space_corrected), file(datain) from MARKERS
     	output:
-    	file('*.csv')
+    	file('*.rds')
 
     	"""
     	find_markers.R\
 		--input_object ${datain}\
 		--assay_name ${params.assay_name}\
 		--corrected_assay ${params.corrected_assay}\
+		--batch_key ${params.batch_key}\
 		--celltype_key ${params.celltype_key}\
-		--output_markers seurat_markers.${method}.${datasetname}.csv
+		--output_markers seurat_markers.${method}.${datasetname}.rds
 	
     	"""
 	}
