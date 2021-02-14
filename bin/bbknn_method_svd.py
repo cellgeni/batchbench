@@ -15,6 +15,7 @@ def main(dataset):
     # compute PCA
     sc.tl.pca(dataset, n_comps = args.n_pcs)
     # run BBKNN
+    print("BBKNN start!")
     dataset_bbknn = bbknn.bbknn(dataset, 
 				batch_key=args.batch_key, 
 				neighbors_within_batch=args.n_neighbours, 
@@ -32,7 +33,11 @@ def read_h5ad(dataset):
 # args
 if __name__== "__main__":
 
+    print("-- 1")
+
     parser = argparse.ArgumentParser(description='Input/Output files')
+
+    print("-- 2")
 
     parser.add_argument("--input_object", 
 			dest='input_object',

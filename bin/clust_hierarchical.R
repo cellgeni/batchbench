@@ -91,6 +91,17 @@ clust_df <- function(hc, kk, cell_names){
   clust_df <- data.frame("hclust" = clusters, row.names = cell_names)
   clust_df
 }
+# Remove items with zero variance
+rm_zero_var <- function(dataset, assay, axis){
+  if(!(axis %in% c(1, 2))){stop("Axis provided must be 1 or 2!")}
+  ax_zero_var <- as.numeric(which(apply(assay(dataset, assay), axis, var) == 0))
+  print(paste0("Removing ", length(ax_zero_var), " items with zero variance in axis = ", axis))
+  if(length(ax_zero_var) > 0){
+    if(axis == 1) dataset <- dataset[-ax_zero_var, ]
+    if(axis == 2) dataset <- dataset[, -ax_zero_var]
+  }
+  dataset
+}
 
 ##  EXECUTE  ##
 
@@ -102,18 +113,6 @@ method <- opt$method
 if(is.null(method) || is.na(method)){ stop("Please provide the batch correction method the input file comes from") }
 
 suppressPackageStartupMessages(require(SingleCellExperiment))
-# Function 
-## Remove items with zero variance
-rm_zero_var <- function(dataset, assay, axis){
-  if(!(axis %in% c(1, 2))){stop("Axis provided must be 1 or 2!")}
-  ax_zero_var <- as.numeric(which(apply(assay(dataset, assay), axis, var) == 0))
-  print(paste0("Removing ", length(ax_zero_var), " items with zero variance in axis = ", axis))
-  if(length(ax_zero_var) > 0){
-    if(axis == 1) dataset <- dataset[-ax_zero_var, ]
-    if(axis == 2) dataset <- dataset[, -ax_zero_var]
-  }
-  dataset
-}
 # read input files
 dataset <- readRDS(opt$input_object)
 features <- as.character(read.csv(opt$input_features, row.names =1, header = T)$x)
