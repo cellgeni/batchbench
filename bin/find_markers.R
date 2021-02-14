@@ -25,11 +25,25 @@ option_list = list(
     help = 'Corrected counts assay name'
   ),
   make_option(
+    c("-b", "--batch_key"),
+    action = "store",
+    default = "Batch",
+    type = 'character',
+    help = 'Batch key in cell metadata'
+  ),
+  make_option(
     c("-t", "--celltype_key"),
     action = "store",
     default = "cell_type1",
     type = 'character',
     help = 'Cell type key in cell metadata'
+  ),
+  make_option(
+    c("-l", "--logFC.thres"),
+    action = "store",
+    default = 0.5,
+    type = 'numeric',
+    help = 'logFC threshold for marker gene detection.'
   ),
   make_option(
     c("-o", "--output_markers"),
@@ -47,21 +61,23 @@ suppressPackageStartupMessages(library(Seurat))
 # args
 assay_name <- opt$assay_name
 batch_key <- opt$batch_key
+celltype_key <- opt$celltype_key
 corrected_assay <- opt$corrected_assay
+logFC.thres <- opt$logFC.thres
 
 # Find markers function 
 find_markers_seurat <- function(dataset, batch){
-  Idents(dataset) <- dataset$cell_type1
+  Idents(dataset) <- dataset[[celltype_key]]
   markers_list <- list() #list of dataframes with marker gene info
   for (i in 1:length(levels(dataset))){
     tryCatch({
       print(paste0("** Cell type ", i, "--", levels(dataset)[i]))
       #if computing over the merged dataset, 
       if(batch == F){
-        markers_list[["merged_dataset"]][[levels(dataset)[i]]] <- FindMarkers(object = dataset, slot = "data", ident.1 = levels(dataset)[i], ident.2 = NULL, min.pct = 0.5, logfc.threshold = 2)
+        markers_list[["merged_dataset"]][[levels(dataset)[i]]] <- FindMarkers(object = dataset, slot = "data", ident.1 = levels(dataset)[i], ident.2 = NULL, min.pct = 0.5, logfc.threshold =logFC.thres )
       }
       if (batch == T){
-        markers_list[[levels(dataset)[i]]] <- FindMarkers(object = dataset,  slot = "data", ident.1 = levels(dataset)[i], ident.2 = NULL, min.pct = 0.5,  logfc.threshold = 2)
+        markers_list[[levels(dataset)[i]]] <- FindMarkers(object = dataset,  slot = "data", ident.1 = levels(dataset)[i], ident.2 = NULL, min.pct = 0.5,  logfc.threshold = logFC.thres)
       }
       # continue if error
     }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
@@ -73,7 +89,7 @@ find_markers_by_batch <- function(dataset){
   #table_batches <- table(as.character(dataset[[batch_key]]))
   #batch_list <- lapply(1:length(table_batches), function(x) dataset[, dataset[[batch_key]]==names(table_batches)[x]])
   #names(batch_list) <- names(table_batches)
-  batch_list <- SplitObject(dataset, split.by = "Batch")
+  batch_list <- SplitObject(dataset, split.by = batch_key)
   by_batch_markers_list <- list()
   #loop through the batches
   for(i in 1:length(batch_list)){

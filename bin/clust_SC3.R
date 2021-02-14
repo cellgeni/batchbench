@@ -136,12 +136,9 @@ if(!(method %in% c("logcounts", "Logcounts", "mnnCorrect", "mnncorrect", "limma"
 celltype_key <- opt$celltype_key
 biology <- opt$biology
 
-print("A")
 # read input files
 dataset <- readRDS(opt$input_object)
-print("B")
 features <- as.character(read.csv(opt$input_features, row.names =1, header = T)$x)
-print("C")
 # subset input object by features
 dataset <- dataset[features, ]
 
@@ -153,7 +150,6 @@ if( method %in% c("Logcounts", "logcounts")){ clust_assay <- assay_name
 dataset <- rm_zero_var(dataset, assay = clust_assay, axis = 1)
 # Remove genes with zero variance
 dataset <- rm_zero_var(dataset, assay = clust_assay, axis = 2)
-print("D")
 
 # 1. Build SC3 custom SCE object
 if(method %in% c("logcounts", "Logcounts")){
@@ -161,17 +157,13 @@ if(method %in% c("logcounts", "Logcounts")){
   }else{
   sce <- exp_sce(dataset, assay_name = corrected_assay)
 }
-print("E")
 # 2. Add modifications to make SCE object required by SC3
 sce <- common_modif_sc3(sce)
-print("F")
 # 3. Run SC3
 suppressPackageStartupMessages(library(SC3))
 sce_sc3 <- run_SC3(sce, celltype_key, biology = biology)
-print("G")
 # 3.2 save SC3 SCE object
 #saveRDS(sce_sc3, file = opt$save_SCE)
-print("H")
 # 4. Extract cluster annotation
 sc3_clust_annot <- sce_sc3@colData[, grep("sc3_", colnames(sce_sc3@colData))]
 print(head(sc3_clust_annot))

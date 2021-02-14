@@ -8,7 +8,7 @@ import scanpy as sc
 import argparse
 
 def save_umap(umap_df, out_name):
-    umap_df.to_csv(out_name, header = True, index = False)
+    umap_df.to_csv(out_name, header = True, index = True)
 
 def umap_counts_mat(dataset):
     """Compute UMAP over the expression matrix of batch corrected objects, 
@@ -16,7 +16,7 @@ def umap_counts_mat(dataset):
     sc.tl.pca(dataset, n_comps=args.n_pcs)
     sc.pp.neighbors(dataset, n_neighbors=args.n_neighbours, use_rep = 'X_pca')
     sc.tl.umap(dataset, n_components=2)
-    umap_df = pd.DataFrame(dataset.obsm["X_umap"], columns = ["UMAP_1", "UMAP_2"])
+    umap_df = pd.DataFrame(dataset.obsm["X_umap"], index = dataset.obs_names,  columns = ["UMAP_1", "UMAP_2"])
     return umap_df
 
 def umap_embedding(dataset):
@@ -24,14 +24,14 @@ def umap_embedding(dataset):
     This includes: fastMNN and Harmony methods."""
     sc.pp.neighbors(dataset, n_neighbors=args.n_neighbours, use_rep = 'X_corrected_embedding')
     sc.tl.umap(dataset, n_components=2)
-    umap_df = pd.DataFrame(dataset.obsm["X_umap"], columns = ["UMAP_1", "UMAP_2"])
+    umap_df = pd.DataFrame(dataset.obsm["X_umap"], index = dataset.obs_names, columns = ["UMAP_1", "UMAP_2"])
     return umap_df
 
 def umap_bbknn(dataset):
     """Compute UMAP over the graph of batch corrected object,
     This includes: BBKNN method."""
     sc.tl.umap(dataset, n_components=2)
-    umap_df = pd.DataFrame(dataset.obsm["X_umap"], columns = ["UMAP_1", "UMAP_2"])
+    umap_df = pd.DataFrame(dataset.obsm["X_umap"], index = dataset.obs_names, columns = ["UMAP_1", "UMAP_2"])
     return umap_df
 
 def distribute_datasets(dataset):
