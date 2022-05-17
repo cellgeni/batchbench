@@ -1,29 +1,33 @@
 profiles {
 	docker {
 		docker.enabled = true
-		process { container = 'quay.io/cellgeni/batchbench:v0.28'}
+		process { 
+			// container = 'quay.io/cellgeni/batchbench:theta'
+			container = 'quay.io/cellgeni/batchbench:v0.28'
+		}
 	}
 	
 	local {
 		process.executor = 'local'
 		executor {
-		    name = 'local'
-		    cpus =30 
-		    memory = 345.GB
+			name = 'local'
+		    cpus = 1 
+		    memory = 8.GB
 		}
 
 		process {
-			 cpus   =  1
-			 memory =  8.GB
-			 queue = 'normal'
-			 errorStrategy = 'ignore'
-			 maxRetries = 4
-			 maxErrors = -1
+			cpus   =  1
+			memory =  8.GB
+			queue = 'normal'
+			errorStrategy = 'ignore'
+			maxRetries = 4
+			maxErrors = -1
 			
-			 withLabel: long_running {queue = 'long'}
-			}
-  		}
-	}
+			withLabel: long_running {queue = 'long'}
+		}
+  	}
+}
+	
 params{
 	data_dir="${baseDir}/data/test_data/"
 	dataset_list="${baseDir}/metadata/dataset_list.txt"

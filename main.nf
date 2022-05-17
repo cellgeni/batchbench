@@ -14,55 +14,57 @@ Channel.fromPath(params.dataset_list)
 process get_datasets {
 	MAX = 4
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 10.GB * (task.attempt) }
+	//memory = { 10.GB + 10.GB * (task.attempt) }
  	tag "$datasetname"
 
-    	input:
-    	val datasetname from DATALIST
-    	output:
-    	//set val(datasetname), file('*.h5ad') into ch_QC_h5ad
-    	set val(datasetname), file('*rds') into QC_RDS_CH
+	input:
+    val datasetname from DATALIST
+    
+	output:
+	set val(datasetname), file('*rds') into QC_RDS_CH
     
 		
-    	shell:
-    	'''
-    	Rfile="!{params.data_dir}!{datasetname}.rds"
-    	if [[ ! -e $Rfile ]]; then
-    	  echo "Please check existence of $Rfile"
-    	  false
-    	fi
-    	#ln -s $pyfile .
-    	ln -s $Rfile .
-    	'''
+    shell:
+    '''
+    Rfile="!{params.data_dir}!{datasetname}.rds"
+    if [[ ! -e $Rfile ]]; then
+    	echo "Please check existence of $Rfile"
+    	false
+    fi
+    #ln -s $pyfile .
+    ln -s $Rfile .
+    '''
 }
 
 
 // data QC 
 process QC_rds{
 	MAX = 4
-    	publishDir "${params.output_dir}/${datasetname}", mode: 'copy', pattern: "*.txt" 
-    	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy', pattern: "*.rds" 
+    publishDir "${params.output_dir}/${datasetname}", mode: 'copy', pattern: "*.txt" 
+    publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy', pattern: "*.rds" 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 20.GB + 10.GB * (task.attempt) }
+	//memory = { 20.GB + 10.GB * (task.attempt) }
 	tag "QC $datasetname"
 
-        input:
-        set val(datasetname), file(datain) from QC_RDS_CH
+    input:
+	set val(datasetname), file(datain) from QC_RDS_CH
         
 	output:
 	set val(datasetname), file('QC.*.rds') into SUBSET_FEATURES, SCE2H5AD_INPUT, HARMONY_METHOD, LIMMA_METHOD, COMBAT_METHOD, SEURAT3_METHOD, MNNCORRECT_METHOD, FASTMNN_METHOD
-        set val(datasetname), val('logcounts'), val('exp_matrix'), file("QC.*.rds") into LOGCOUNTS_ENTROPY, LOGCOUNTS_UMAP, LOGCOUNTS_CLUST_SC3, LOGCOUNTS_2SEURAT, LOGCOUNTS_MARKERS
+    set val(datasetname), val('logcounts'), val('exp_matrix'), file("QC.*.rds") into LOGCOUNTS_ENTROPY, LOGCOUNTS_UMAP, LOGCOUNTS_CLUST_SC3, LOGCOUNTS_2SEURAT, LOGCOUNTS_MARKERS
 	file('QC_info.*.txt')	
-        """
-        QC_data.R\
+    
+	script:
+	"""
+    QC_data.R\
 		--input_object ${datain}\
 		--bt_thres ${params.QC_rds.batch_thres}\
 		--ct_thres ${params.QC_rds.celltype_thres}\
 		--min_genes ${params.QC_rds.min_genes}\
 		--min_cells ${params.QC_rds.min_cells}\
 		--output_object QC.${datasetname}.rds > QC_info.${datasetname}.txt
-        """
-	}
+    """
+}
 
 // Fraction of features for clustering 
 PROP_GENES = Channel.from(0.05, 0.1, 0.2, 0.5, 1)
@@ -72,16 +74,18 @@ SUBSET_FEATURES_CV = SUBSET_FEATURES.combine(PROP_GENES)
 // Subset features for clustering analysis 
 process subset_feat_clustering {
 	MAX = 4
-    	publishDir "${params.output_dir}/${datasetname}/Subset_features", mode: 'copy' 
+    publishDir "${params.output_dir}/${datasetname}/Subset_features", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 10.GB * (task.attempt) }
+	//memory = { 10.GB + 10.GB * (task.attempt) }
 	tag "$datasetname subset $prop_genes genes by coeff. variation"
 	
 	input:
 	set val(datasetname), file(datain), val(prop_genes) from SUBSET_FEATURES_CV
 	
 	output:
-	set val(datasetname), val(prop_genes), file("features_*.csv") into FEATURES 
+	set val(datasetname), val(prop_genes), file("features_*.csv") into FEATURES
+	
+	script:
 	"""
 	subset_genes_by_cv.R\
 		--input_object ${datain}\
@@ -98,18 +102,19 @@ ALL_FEATURES = CONSIDER_ALL_FEATURES.filter{ it[1] == 1 }.first()
 
 // Conv_1. Convert Sce objects to H5ad for the python tools
 process conv_sce2h5ad {
-    	publishDir "${params.output_dir}/${datasetname}/Converted_objects", mode: 'copy' 
+    publishDir "${params.output_dir}/${datasetname}/Converted_objects", mode: 'copy' 
 	MAX = 4
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = {5.GB + 10.GB * (task.attempt) }
+	//memory = {5.GB + 10.GB * (task.attempt) }
 	tag "h5ad2sce $datasetname"
 	
 	input:
-        set val(datasetname), file(datain) from SCE2H5AD_INPUT
+    set val(datasetname), file(datain) from SCE2H5AD_INPUT
 	
 	output:
  	set val(datasetname), file("*.h5ad") into BBKNN_METHOD, SCANORAMA_METHOD
 	
+	script:
 	"""
 	export NUMBA_CACHE_DIR=~/NUMBA_CACHE
 	convert_sce2h5ad.R\
@@ -125,24 +130,25 @@ process BBKNN {
 	MAX = 4
     	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt) }
+	//memory = { 10.GB + 20.GB * (task.attempt) }
         tag "BBKNN $datasetname"
         
 	input:
-        set val(datasetname), file(datain) from BBKNN_METHOD 
+    set val(datasetname), file(datain) from BBKNN_METHOD 
         
 	output:
-        set val(datasetname), val('bbknn'), val('graph'), file('bbknn.*.h5ad') into BBKNN_2SEURAT, BBKNN_2SCE, BBKNN_UMAP
-        
-        """
-        bbknn_method.py\
+    set val(datasetname), val('bbknn'), val('graph'), file('bbknn.*.h5ad') into BBKNN_2SEURAT, BBKNN_2SCE, BBKNN_UMAP
+
+	script:    
+	"""
+    bbknn_method.py\
 		--input ${datain}\
 		--batch_key ${params.batch_key}\
 		--n_pcs ${params.BBKNN.n_pcs}\
 		--n_neighbours ${params.BBKNN.n_neighbours}\
 		--output bbknn.${datasetname}.h5ad
-        """
-	}
+    """
+}
 } else {
 	BBKNN_2SEURAT = Channel.empty()
 	BBKNN_2SCE = Channel.empty()
@@ -153,24 +159,25 @@ process BBKNN {
 if(params.scanorama.run == "True"){
 process Scanorama {
 	MAX = 4
-    	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
+    publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt) }
-     	tag "Scanorama $datasetname"
+	//memory = { 10.GB + 20.GB * (task.attempt) }
+    tag "Scanorama $datasetname"
      	
 	input:
-     	set val(datasetname), file(datain) from SCANORAMA_METHOD
+    set val(datasetname), file(datain) from SCANORAMA_METHOD
      	
 	output:
-     	set val(datasetname), val('scanorama'), val('exp_matrix'), file('scanorama.*.h5ad') into SCANORAMA_2SCE, SCANORAMA_2SEURAT, SCANORAMA_UMAP 
-     	
-    	"""
-     	scanorama_method.py\
+    set val(datasetname), val('scanorama'), val('exp_matrix'), file('scanorama.*.h5ad') into SCANORAMA_2SCE, SCANORAMA_2SEURAT, SCANORAMA_UMAP 
+    
+	script:	
+    """
+    scanorama_method.py\
 		--input ${datain}\
 		--batch_key ${params.batch_key}\
 		--output scanorama.${datasetname}.h5ad
-     	"""
-	}
+    """
+}
 } else {
 	SCANORAMA_2SCE = Channel.empty()
 	SCANORAMA_2SEURAT = Channel.empty()
@@ -185,9 +192,9 @@ PY_TOOLS_2SCE = BBKNN_2SCE.mix(SCANORAMA_2SCE)
 if(params.harmony.run == "True"){
 process Harmony {
 	MAX = 4
-    	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
+    publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt) }
+	//memory = { 10.GB + 20.GB * (task.attempt) }
 	tag "Harmony $datasetname"
 	
 	input:
@@ -196,6 +203,7 @@ process Harmony {
 	output:
 	set val(datasetname), val('harmony'), val('embedding'), file('harmony.*.rds') into HARMONY_ENTROPY, HARMONY_UMAP, HARMONY_CLUST, HARMONY_2SEURAT, HARMONY_2H5AD
 	
+	script:
 	"""
 	harmony_method.R\
 		--input_object ${datain}\
@@ -220,23 +228,24 @@ process Limma {
 	MAX = 4
 	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt) }
-    	tag "Limma $datasetname"
+	//memory = { 10.GB + 20.GB * (task.attempt) }
+    tag "Limma $datasetname"
     	
 	input:
-    	set val(datasetname), file(datain) from LIMMA_METHOD
+    set val(datasetname), file(datain) from LIMMA_METHOD
     	
 	output:
-    	set val(datasetname), val('limma'), val('exp_matrix'), file('limma.*.rds') into LIMMA_ENTROPY, LIMMA_UMAP,  LIMMA_CLUST_SC3, LIMMA_2H5AD, LIMMA_2SEURAT 
+    set val(datasetname), val('limma'), val('exp_matrix'), file('limma.*.rds') into LIMMA_ENTROPY, LIMMA_UMAP,  LIMMA_CLUST_SC3, LIMMA_2H5AD, LIMMA_2SEURAT 
     	
-    	"""
-    	limma_method.R\
+    script:	
+	"""
+    limma_method.R\
 		--input_object ${datain}\
 		--assay_name ${params.assay_name}\
 		--corrected_assay ${params.corrected_assay}\
 		--output_object limma.${datasetname}.rds
-    	"""
-	}
+	"""
+}
 } else {
 	LIMMA_ENTROPY = Channel.empty()
 	LIMMA_UMAP = Channel.empty()
@@ -251,23 +260,25 @@ process Combat{
 	MAX = 4
 	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt) }
-    	tag "Combat $datasetname"
+	//memory = { 10.GB + 20.GB * (task.attempt) }
+    tag "Combat $datasetname"
     	
 	input:
-    	set val(datasetname), file(datain) from COMBAT_METHOD
+    set val(datasetname), file(datain) from COMBAT_METHOD
     	
 	output:
-    	set val(datasetname), val('ComBat'), val('exp_matrix'), file('ComBat.*.rds') into COMBAT_ENTROPY, COMBAT_UMAP, COMBAT_CLUST_SC3, COMBAT_2H5AD, COMBAT_2SEURAT 
-    	"""
-    	combat_method.R\
+    set val(datasetname), val('ComBat'), val('exp_matrix'), file('ComBat.*.rds') into COMBAT_ENTROPY, COMBAT_UMAP, COMBAT_CLUST_SC3, COMBAT_2H5AD, COMBAT_2SEURAT 
+
+	script:	
+	"""
+	combat_method.R\
 		--input_object ${datain}\
 		--assay_name ${params.assay_name}\
 		--corrected_assay ${params.corrected_assay}\
 		--batch_key ${params.batch_key}\
 		--output_object ComBat.${datasetname}.rds
-    	"""
-	}
+    """
+}
 } else {
 	COMBAT_ENTROPY = Channel.empty()
 	COMBAT_UMAP = Channel.empty()
@@ -282,18 +293,18 @@ process Seurat_3{
 	MAX = 4
  	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 30.GB + 20.GB * (task.attempt) }
-    	tag "Seurat 3 $datasetname"
+	//memory = { 30.GB + 20.GB * (task.attempt) }
+    tag "Seurat 3 $datasetname"
     	
 	input:
-    	set val(datasetname), file(datain) from SEURAT3_METHOD
+    set val(datasetname), file(datain) from SEURAT3_METHOD
     	
 	output:
-    	set val(datasetname), val('Seurat3'), val('exp_matrix'), file('Seurat3.*.rds') into SEURAT3_2H5AD, SEURAT3_2SCE, SEURAT3_CLUST_SEURAT, SEURAT3_MARKERS 
+    set val(datasetname), val('Seurat3'), val('exp_matrix'), file('Seurat3.*.rds') into SEURAT3_2H5AD, SEURAT3_2SCE, SEURAT3_CLUST_SEURAT, SEURAT3_MARKERS 
     	
-	
-    	"""
-    	seurat3_method.R\
+	script:
+    """
+    seurat3_method.R\
 		--input_object ${datain}\
 		--assay_name ${params.assay_name}\
 		--corrected_assay ${params.corrected_assay}\
@@ -302,8 +313,8 @@ process Seurat_3{
 		--n_features ${params.Seurat_3.n_features}\
 		--n_anchors ${params.Seurat_3.n_anchors}\
 		--output_object Seurat3.${datasetname}.rds
-    	"""
-	}
+    """
+}
 } else {
 	SEURAT3_2H5AD = Channel.empty()
 	SEURAT3_2SCE = Channel.empty()
@@ -317,18 +328,19 @@ process mnnCorrect{
 	MAX = 4
 	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 30.GB + 20.GB * (task.attempt) }
-    	tag "mnnCorrect $datasetname"
-    	label "long_running"
+	//memory = { 30.GB + 20.GB * (task.attempt) }
+    tag "mnnCorrect $datasetname"
+    label "long_running"
     	
 	input:
-    	set val(datasetname), file(datain) from MNNCORRECT_METHOD
+	set val(datasetname), file(datain) from MNNCORRECT_METHOD
     	
 	output:
-    	set val(datasetname), val('mnnCorrect'), val('exp_matrix'), file('mnnCorrect.*.rds') into MNNCORRECT_ENTROPY, MNNCORRECT_UMAP, MNNCORRECT_2H5AD, MNNCORRECT_2SEURAT, MNNCORRECT_CLUST_SC3 
+    set val(datasetname), val('mnnCorrect'), val('exp_matrix'), file('mnnCorrect.*.rds') into MNNCORRECT_ENTROPY, MNNCORRECT_UMAP, MNNCORRECT_2H5AD, MNNCORRECT_2SEURAT, MNNCORRECT_CLUST_SC3 
 
-    	"""
-    	mnnCorrect_method.R\
+	script:
+    """
+    mnnCorrect_method.R\
 		--input_object ${datain}\
 		--batch_key ${params.batch_key}\
 		--k_num ${params.mnnCorrect.k}\
@@ -338,8 +350,8 @@ process mnnCorrect{
 		--corrected_assay ${params.corrected_assay}\
 		--cos_norm ${params.mnnCorrect.cos_norm}\
 		--output_object mnnCorrect.${datasetname}.rds
-    	"""
-	}
+    """	
+}
 } else {
 	MNNCORRECT_ENTROPY = Channel.empty()
 	MNNCORRECT_UMAP = Channel.empty()
@@ -354,17 +366,18 @@ process fastMNN{
 	MAX = 4
  	publishDir "${params.output_dir}/${datasetname}/Corrected_objects", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 20.GB * (task.attempt) }
-    	tag "fastMNNt $datasetname"
+	//memory = { 10.GB + 20.GB * (task.attempt) }
+    tag "fastMNNt $datasetname"
     	
 	input:
-    	set val(datasetname), file(datain) from FASTMNN_METHOD
+    set val(datasetname), file(datain) from FASTMNN_METHOD
     	
 	output:
-    	set val(datasetname), val('fastMNN'), val('embedding'), file('fastMNN.*.rds') into FASTMNN_ENTROPY, FASTMNN_UMAP, FASTMNN_CLUST, FASTMNN_2H5AD, FASTMNN_2SEURAT 
-    	
-    	"""
-    	fastMNN_method.R\
+    set val(datasetname), val('fastMNN'), val('embedding'), file('fastMNN.*.rds') into FASTMNN_ENTROPY, FASTMNN_UMAP, FASTMNN_CLUST, FASTMNN_2H5AD, FASTMNN_2SEURAT 
+
+	script:	
+    """
+    fastMNN_method.R\
 		--input_object ${datain}\
 		--batch_key ${params.batch_key}\
 		--k_num ${params.fastMNN.k}\
@@ -373,7 +386,7 @@ process fastMNN{
 		--corrected_emb ${params.corrected_emb}\
 		--cos_norm ${params.fastMNN.cos_norm}\
 		--output_object fastMNN.${datasetname}.rds
-    	"""
+    """
 	}
 } else {
 	FASTMNN_ENTROPY = Channel.empty()
@@ -385,10 +398,10 @@ process fastMNN{
 
 // Conv_1. Convert H5AD objects to SCE 
 process conv_h5ad2sce {
-    	publishDir "${params.output_dir}/${datasetname}/Converted_objects", mode: 'copy' 
+    publishDir "${params.output_dir}/${datasetname}/Converted_objects", mode: 'copy' 
 	MAX = 4
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 10.GB * (task.attempt) }
+	//memory = { 10.GB + 10.GB * (task.attempt) }
 	tag "sce2h5ad $method $datasetname"
 	
 	input:
@@ -397,6 +410,7 @@ process conv_h5ad2sce {
 	output:
  	set val(datasetname), val(method), val(space_corrected), file('*.rds') into PY_METHODS_ENTROPY, PY_METHODS_CLUST_SC3 
 	
+	script:
 	"""
 	convert_h5ad2sce.R\
 		 --input_object ${datain}\
@@ -411,18 +425,19 @@ SCANORAMA_CLUST_SC3  = PY_METHODS_CLUST_SC3.filter{ it[1] == "scanorama" }
 
 // Conv_2. Convert SEURAT object to SCE
 process conv_seurat2sce {
-    	publishDir "${params.output_dir}/${datasetname}/Converted_objects", mode: 'copy' 
+    publishDir "${params.output_dir}/${datasetname}/Converted_objects", mode: 'copy' 
 	MAX = 4
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 5.GB + 10.GB * (task.attempt) }
+	//memory = { 5.GB + 10.GB * (task.attempt) }
 	tag "seurat2sce $method $datasetname"
 	
 	input:
-        set val(datasetname), val(method), val(space_corrected), file(datain) from SEURAT3_2SCE 
+    set val(datasetname), val(method), val(space_corrected), file(datain) from SEURAT3_2SCE 
 	
 	output:
  	set val(datasetname), val(method), val(space_corrected), file('*.rds') into SEURAT_ENTROPY, SEURAT_CLUST_SC3, SEURAT_UMAP
 	
+	script:
 	"""
 	convert_seurat2sce.R\
 		 --input ${datain}\
@@ -434,17 +449,19 @@ process conv_seurat2sce {
 
 // Conv_3. Convert H5AD object to SEURAT
 process conv_h5ad2seurat{
-    	publishDir "${params.output_dir}/${datasetname}/Converted_objects", mode: 'copy' 
+    publishDir "${params.output_dir}/${datasetname}/Converted_objects", mode: 'copy' 
 	MAX = 4
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 10.GB * (task.attempt) }
+	//memory = { 10.GB + 10.GB * (task.attempt) }
 	tag "h5ad2seurat $method $datasetname"
      	
 	input:
-     	set val(datasetname), val(method), val(space_corrected), file(datain) from PY_TOOLS_2SEURAT 
+    set val(datasetname), val(method), val(space_corrected), file(datain) from PY_TOOLS_2SEURAT 
      	
 	output:
-    	set val(datasetname), val(method), val(space_corrected), file('*.rds') into SCANORAMA_CLUST_SEU, BBKNN_CLUST_SEU, PY_METHODS_MARKERS 
+    set val(datasetname), val(method), val(space_corrected), file('*.rds') into SCANORAMA_CLUST_SEU, BBKNN_CLUST_SEU, PY_METHODS_MARKERS 
+	
+	script:
 	"""
 	convert_h5ad2seurat.R\
 		--input ${datain}\
@@ -452,7 +469,7 @@ process conv_h5ad2seurat{
 		--method ${method}\
 		--output_object seurat_obj.${method}.${datasetname}.rds
 	""" 
-	}
+}
 
 // Separate scanorama anb BBKNN channels as one will be combined with features and second not
 SCANORAMA_CLUST_SEURAT = SCANORAMA_CLUST_SEU.filter{ it[1] == "scanorama" }
@@ -466,17 +483,19 @@ LOGCOUNTS_2SEURAT.mix(HARMONY_2SEURAT, LIMMA_2SEURAT, COMBAT_2SEURAT, MNNCORRECT
 
 //Conv_4. Convert SCE to Seurat 
 process conv_sce2seurat{
-    	publishDir "${params.output_dir}/${datasetname}/Converted_objects", mode: 'copy' 
+    publishDir "${params.output_dir}/${datasetname}/Converted_objects", mode: 'copy' 
 	MAX = 4
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 5.GB + 10.GB * (task.attempt) }
+	//memory = { 5.GB + 10.GB * (task.attempt) }
 	tag "sce2seurat $method $datasetname"
      	
 	input:
 	set val(datasetname), val(method), val(space_corrected), file(datain) from CONV_SCE2SEURAT 
      	
 	output:
-     	set val(datasetname), val(method), val(space_corrected), file('*.rds') into SCE_CLUST_SEURAT, SCE_MARKERS
+    set val(datasetname), val(method), val(space_corrected), file('*.rds') into SCE_CLUST_SEURAT, SCE_MARKERS
+	
+	script:
 	"""
 	convert_sce2seurat.R\
 		--input ${datain}\
@@ -485,7 +504,7 @@ process conv_sce2seurat{
 		--method ${method}\
 		--output_object seurat_obj.${method}.${datasetname}.rds
 	""" 
-	}
+}
 
 // Separate SCE_CLUST_SEURAT channel into counts-mat and other methods (low-d and graph)
 SCE_CLUST_SEURAT.into{ SCE_CLUST_SEURAT_1; SCE_CLUST_SEURAT_2 }
@@ -505,15 +524,16 @@ process entropy {
 	MAX = 4
  	publishDir "${params.output_dir}/${datasetname}/Entropy", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 10.GB + 10.GB * (task.attempt) }
+	//memory = { 10.GB + 10.GB * (task.attempt) }
 	tag "compute entropy $datain"
 	
 	input:
-        set val(datasetname), val(method), val(space_corrected), file(datain) from ENTROPY 
+    set val(datasetname), val(method), val(space_corrected), file(datain) from ENTROPY 
 	
 	output:
  	file("*.csv") 
 	
+	script:
 	"""
 	R_entropy.R\
 		--input_object ${datain}\
@@ -544,17 +564,18 @@ process clust_SC3{
  	publishDir "${params.output_dir}/${datasetname}/Clustering/SC3_Clust", mode: 'copy', pattern: '*.csv' 
  	//publishDir "${params.output_dir}/${datasetname}/Clustering/SC3_Clust/SC3_objects", mode: 'copy', pattern: '*.rds' 
 	errorStrategy { ( task.exitStatus == 1 || task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 30.GB + 10.GB * (task.attempt) }
-    	tag "SC3 Clust $method $datasetname $features"
+	//memory = { 30.GB + 10.GB * (task.attempt) }
+    tag "SC3 Clust $method $datasetname $features"
 
-    	input:
-    	set val(datasetname), val(method), val(space_corrected), file(datain), val(prop_genes), file(features) from CLUST_SC3
+	input:
+    set val(datasetname), val(method), val(space_corrected), file(datain), val(prop_genes), file(features) from CLUST_SC3
     	
 	output:
-    	file('*.csv')
+    file('*.csv')
 
-    	"""
-    	clust_SC3.R\
+	script:
+    """
+    clust_SC3.R\
 		--input_object ${datain}\
 		--input_features ${features}\
 		--assay_name ${params.assay_name}\
@@ -565,8 +586,8 @@ process clust_SC3{
 		--save_SCE SC3_SCE-${method}-${prop_genes}-${datasetname}.rds\
 		--output_clusters SC3_clusters-${method}-${prop_genes}-${datasetname}.csv\
 		--output_rowdata SC3_biology-${method}-${prop_genes}-${datasetname}.csv 
-    	"""
-	}
+    """
+}
 }
 
 
@@ -586,19 +607,20 @@ CLUST_SEURAT = COUNTS_MAT_CLUST_SEURAT.mix( REST_CLUST_SEURAT )
 if(params.clust_Seurat.run == "True"){
 process clust_Seurat{
 	MAX = 4
-    	publishDir "${params.output_dir}/${datasetname}/Clustering/Seurat_Clust", mode: 'copy' 
-	memory = { 45.GB + 20.GB * (task.attempt) }
+    publishDir "${params.output_dir}/${datasetname}/Clustering/Seurat_Clust", mode: 'copy' 
+	//memory = { 45.GB + 20.GB * (task.attempt) }
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-    	tag "Seurat Clust $method $datasetname $features"
+    tag "Seurat Clust $method $datasetname $features"
 
-    	input:
-    	set val(datasetname), val(method), val(space_corrected), file(datain), val(prop_genes), file(features) from CLUST_SEURAT
+    input:
+    set val(datasetname), val(method), val(space_corrected), file(datain), val(prop_genes), file(features) from CLUST_SEURAT
 	
-    	output:
-    	file('*.csv')
-    	
+    output:
+    file('*.csv')
+
+	script:	
 	"""
-    	clust_Seurat.R\
+    clust_Seurat.R\
 		--input_object ${datain}\
 		--input_features ${features}\
 		--assay_name ${params.assay_name}\
@@ -610,7 +632,7 @@ process clust_Seurat{
 		--k_num ${params.clust_Seurat.k_num}\
 		--louvain_clusters louvain_clusters-${method}-${prop_genes}-${datasetname}.csv\
 		--leiden_clusters leiden_clusters-${method}-${prop_genes}-${datasetname}.csv
-    	"""
+    """
 	}
 }
 
@@ -629,19 +651,20 @@ CLUST_HIERARCH = COUNTS_MAT_CLUST_HIERARCH.mix(REST_CLUST_HIERARCH)
 if(params.clust_Hierarch.run == "True"){
 process clust_Hierarch {
 	MAX = 4
-    	publishDir "${params.output_dir}/${datasetname}/Clustering/Hierarch_Clust", mode: 'copy' 
+    publishDir "${params.output_dir}/${datasetname}/Clustering/Hierarch_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 25.GB + 10.GB * (task.attempt) }
-    	tag "Hierarch Clust $method $datasetname $features"
+	//memory = { 25.GB + 10.GB * (task.attempt) }
+    tag "Hierarch Clust $method $datasetname $features"
 
-    	input:
-    	set val(datasetname), val(method), val(space_corrected), file(datain), val(prop_genes), file(features) from CLUST_HIERARCH 
+    input:
+    set val(datasetname), val(method), val(space_corrected), file(datain), val(prop_genes), file(features) from CLUST_HIERARCH 
 
-    	output:
-    	file('*.csv')
+    output:
+    file('*.csv')
 
+	script:
 	"""
-    	clust_hierarchical.R\
+    clust_hierarchical.R\
 		--input_object ${datain}\
 		--input_features ${features}\
 		--assay_name ${params.assay_name}\
@@ -650,7 +673,6 @@ process clust_Hierarch {
 		--corrected_emb ${params.corrected_emb}\
 		--output_clusters hierarch_clusters-${method}-${prop_genes}-${datasetname}.csv
     	"""
-
 	}
 }
 
@@ -658,19 +680,19 @@ process clust_Hierarch {
 if(params.clust_RaceID.run == "True"){
 process clust_RaceID{
 	MAX = 4
-    	publishDir "${params.output_dir}/${datasetname}/Clustering/RaceID_Clust", mode: 'copy' 
+    publishDir "${params.output_dir}/${datasetname}/Clustering/RaceID_Clust", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 30.GB + 10.GB * (task.attempt) }
-    	tag "RaceID Clust $method $datasetname $features"
+	//memory = { 30.GB + 10.GB * (task.attempt) }
+    tag "RaceID Clust $method $datasetname $features"
 
-    	input:
-    	set val(datasetname), val(method), val(space_corrected), file(datain), val(prop_genes), file(features) from CLUST_RACEID 
+    input:
+    set val(datasetname), val(method), val(space_corrected), file(datain), val(prop_genes), file(features) from CLUST_RACEID 
 	
-    	output:
-    	file('*.csv')
+    output:
+    file('*.csv')
     	
 	"""
-    	clust_RaceID.R\
+    clust_RaceID.R\
 		--input_object ${datain}\
 		--input_features ${features}\
 		--assay_name ${params.assay_name}\
@@ -689,18 +711,19 @@ SEURAT3_MARKERS.mix(SCANORAMA_MARKERS, SCE_MARKERS_FILT).set{ MARKERS }
 if(params.find_markers.run == "True"){
 process find_markers{
 	MAX = 4
-    	publishDir "${params.output_dir}/${datasetname}/Markers", mode: 'copy' 
+    publishDir "${params.output_dir}/${datasetname}/Markers", mode: 'copy' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 5.GB + 20.GB * (task.attempt) }
-    	tag "Markers $method $datasetname"
+	//memory = { 5.GB + 20.GB * (task.attempt) }
+    tag "Markers $method $datasetname"
 
-    	input:
-    	set val(datasetname), val(method), val(space_corrected), file(datain) from MARKERS
-    	output:
-    	file('*.rds')
+    input:
+    set val(datasetname), val(method), val(space_corrected), file(datain) from MARKERS
+    output:
+    file('*.rds')
 
-    	"""
-    	find_markers.R\
+	script:
+    """
+    find_markers.R\
 		--input_object ${datain}\
 		--assay_name ${params.assay_name}\
 		--corrected_assay ${params.corrected_assay}\
@@ -708,7 +731,7 @@ process find_markers{
 		--celltype_key ${params.celltype_key}\
 		--output_markers seurat_markers.${method}.${datasetname}.rds
 	
-    	"""
+    """
 	}
 }
 
@@ -722,20 +745,21 @@ if(params.UMAP.run == "True"){
 
 // Conv_5 Convert RDS (SCE and Seurat) to H5ad objects to compute UMAP only in Python
 process conv_rds2h5ad {
-    	publishDir "${params.output_dir}/${datasetname}/Converted_objects", mode: 'copy' 
+    publishDir "${params.output_dir}/${datasetname}/Converted_objects", mode: 'copy' 
 	MAX = 4
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 5.GB + 10.GB * (task.attempt) }
-    	tag "conv_rds2h5ad $method $datasetname"
-    	label "fast_running"
+	//memory = { 5.GB + 10.GB * (task.attempt) }
+    tag "conv_rds2h5ad $method $datasetname"
+    label "fast_running"
     	
 	input:
-    	set val(datasetname), val(method), val(space_corrected), file(datain) from SCE_UMAP
+    set val(datasetname), val(method), val(space_corrected), file(datain) from SCE_UMAP
     	
 	output:
-    	set val(datasetname), val(method), val(space_corrected), file('*.h5ad') into R_TOOLS_UMAP 
-    	
-    	"""
+    set val(datasetname), val(method), val(space_corrected), file('*.h5ad') into R_TOOLS_UMAP 
+
+	script:	
+    """
    	convert_rds2h5ad.R\
 		 --input ${datain}\
 		 --assay_name ${params.assay_name}\
@@ -743,7 +767,7 @@ process conv_rds2h5ad {
 		 --corrected_emb ${params.corrected_emb}\
 		 --method ${method}\
 		 --output ${method}.${datasetname}.h5ad
-    	"""
+    """
 }
 
 //Merge Python and converted R outputs for UMAP computation
@@ -751,23 +775,24 @@ BBKNN_UMAP.mix(SCANORAMA_UMAP, R_TOOLS_UMAP).set{ ALL_UMAP }
 
 process UMAP {
 	MAX = 4
-    	publishDir "${params.output_dir}/${datasetname}/UMAP" , mode: 'copy', pattern: '*.csv' 
+	publishDir "${params.output_dir}/${datasetname}/UMAP" , mode: 'copy', pattern: '*.csv' 
 	errorStrategy { (task.exitStatus == 130 || task.exitStatus == 137) && task.attempt - 1 <= MAX ? 'retry' : 'ignore' }
-	memory = { 5.GB + 20.GB * (task.attempt) }
-    	tag "UMAP $method $datasetname"
+	//memory = { 5.GB + 20.GB * (task.attempt) }
+    tag "UMAP $method $datasetname"
     	
 	input:
-    	set val(datasetname), val(method), val(space_corrected), file(datain) from ALL_UMAP
+    set val(datasetname), val(method), val(space_corrected), file(datain) from ALL_UMAP
     	
 	output:
-    	file('*.csv')
+    file('*.csv')
     	
-    	"""
-    	run_UMAP.py\
+    script:
+	"""
+    run_UMAP.py\
 		--input_object ${datain}\
 		--n_neighbours ${params.UMAP.n_neighbours}\
 		--n_pcs ${params.UMAP.n_pcs}\
 		--output_umap umap.${method}.${datasetname}.csv
-    	"""
+    """
 	}
 }

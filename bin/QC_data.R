@@ -81,8 +81,8 @@ ct_thres <- opt$ct_thres
 # Read input object
 dataset <- readRDS(opt$input_object)
 # Vectors with batch and cell type annotation
-batch_vector <- as.character(dataset[[batch_key]])
-cell_type_vector <- as.character(dataset[[celltype_key]])
+batch_vector <- as.character(dataset@colData@listData[[batch_key]])
+cell_type_vector <- as.character(dataset@colData@listData[[celltype_key]])
 
 # print table with batch and cell types filtering information
 print_filtering <- function(dataset, filter_vec, threshold, meta_name){
